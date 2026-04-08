@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Basic, standard WSDL — SOAP 1.1, document/wrapped -->
+<definitions
+    name="UserService"
+    targetNamespace="http://example.com/userservice"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/userservice"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/userservice">
+
+      <xsd:element name="GetUser">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="userId" type="xsd:int"/>
+            <xsd:element name="locale" type="xsd:string" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="GetUserResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="userId"    type="xsd:int"/>
+            <xsd:element name="name"      type="xsd:string"/>
+            <xsd:element name="email"     type="xsd:string"/>
+            <xsd:element name="active"    type="xsd:boolean"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="CreateUser">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="name"  type="xsd:string"/>
+            <xsd:element name="email" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="CreateUserResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="userId" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+    </xsd:schema>
+  </types>
+
+  <!-- Messages -->
+  <message name="GetUserRequest">
+    <part name="parameters" element="tns:GetUser"/>
+  </message>
+  <message name="GetUserResponse">
+    <part name="parameters" element="tns:GetUserResponse"/>
+  </message>
+  <message name="CreateUserRequest">
+    <part name="parameters" element="tns:CreateUser"/>
+  </message>
+  <message name="CreateUserResponse">
+    <part name="parameters" element="tns:CreateUserResponse"/>
+  </message>
+
+  <!-- Port Type -->
+  <portType name="UserServicePortType">
+    <operation name="GetUser">
+      <documentation>Retrieves user information by ID.</documentation>
+      <input  message="tns:GetUserRequest"/>
+      <output message="tns:GetUserResponse"/>
+    </operation>
+    <operation name="CreateUser">
+      <documentation>Creates a new user.</documentation>
+      <input  message="tns:CreateUserRequest"/>
+      <output message="tns:CreateUserResponse"/>
+    </operation>
+  </portType>
+
+  <!-- Binding -->
+  <binding name="UserServiceBinding" type="tns:UserServicePortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+
+    <operation name="GetUser">
+      <soap:operation soapAction="http://example.com/userservice/GetUser"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+
+    <operation name="CreateUser">
+      <soap:operation soapAction="http://example.com/userservice/CreateUser"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <!-- Service -->
+  <service name="UserService">
+    <documentation>User management service.</documentation>
+    <port name="UserServicePort" binding="tns:UserServiceBinding">
+      <soap:address location="http://example.com/userservice"/>
+    </port>
+  </service>
+
+</definitions>

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Chained xs:import test — references an external XSD -->
+<definitions
+    name="ReportService"
+    targetNamespace="http://example.com/reports"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/reports"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/reports">
+
+      <xsd:element name="GetReport">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="reportId" type="xsd:string"/>
+            <xsd:element name="format"   type="xsd:string" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="GetReportResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="reportId" type="xsd:string"/>
+            <xsd:element name="content"  type="xsd:base64Binary"/>
+            <xsd:element name="mimeType" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+    </xsd:schema>
+  </types>
+
+  <message name="GetReportRequest">
+    <part name="parameters" element="tns:GetReport"/>
+  </message>
+  <message name="GetReportResponse">
+    <part name="parameters" element="tns:GetReportResponse"/>
+  </message>
+
+  <portType name="ReportPortType">
+    <operation name="GetReport">
+      <documentation>Returns the report as base64.</documentation>
+      <input  message="tns:GetReportRequest"/>
+      <output message="tns:GetReportResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="ReportBinding" type="tns:ReportPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="GetReport">
+      <soap:operation soapAction="http://example.com/reports/GetReport"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <service name="ReportService">
+    <port name="ReportPort" binding="tns:ReportBinding">
+      <soap:address location="http://example.com/reports"/>
+    </port>
+  </service>
+
+</definitions>

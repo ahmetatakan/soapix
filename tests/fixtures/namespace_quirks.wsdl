@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Namespace sorunları: trailing slash, büyük/küçük harf -->
+<definitions
+    name="QuirkyService"
+    targetNamespace="http://quirky.example.com/service/"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://quirky.example.com/service/"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <types>
+    <!-- targetNamespace has trailing slash — intentional quirk -->
+    <xsd:schema targetNamespace="http://quirky.example.com/service/">
+
+      <xsd:element name="Ping">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="message" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="PingResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="echo" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+    </xsd:schema>
+  </types>
+
+  <message name="PingRequest">
+    <part name="parameters" element="tns:Ping"/>
+  </message>
+  <message name="PingResponse">
+    <part name="parameters" element="tns:PingResponse"/>
+  </message>
+
+  <portType name="QuirkyPortType">
+    <operation name="Ping">
+      <input  message="tns:PingRequest"/>
+      <output message="tns:PingResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="QuirkyBinding" type="tns:QuirkyPortType">
+    <!-- SOAP namespace with different casing — intentional quirk -->
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="Ping">
+      <soap:operation soapAction="Ping"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <service name="QuirkyService">
+    <port name="QuirkyPort" binding="tns:QuirkyBinding">
+      <soap:address location="http://quirky.example.com/service/"/>
+    </port>
+  </service>
+
+</definitions>

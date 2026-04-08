@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SOAP 1.2 binding -->
+<definitions
+    name="OrderService"
+    targetNamespace="http://example.com/orders"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/orders"
+    xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/orders">
+
+      <xsd:element name="GetOrder">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="orderId" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="GetOrderResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="orderId" type="xsd:string"/>
+            <xsd:element name="total"   type="xsd:decimal"/>
+            <xsd:element name="status"  type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+    </xsd:schema>
+  </types>
+
+  <message name="GetOrderRequest">
+    <part name="parameters" element="tns:GetOrder"/>
+  </message>
+  <message name="GetOrderResponse">
+    <part name="parameters" element="tns:GetOrderResponse"/>
+  </message>
+
+  <portType name="OrderPortType">
+    <operation name="GetOrder">
+      <input  message="tns:GetOrderRequest"/>
+      <output message="tns:GetOrderResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="OrderBinding" type="tns:OrderPortType">
+    <soap12:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="GetOrder">
+      <soap12:operation soapAction="http://example.com/orders/GetOrder"/>
+      <input>  <soap12:body use="literal"/> </input>
+      <output> <soap12:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <service name="OrderService">
+    <port name="OrderPort" binding="tns:OrderBinding">
+      <soap12:address location="http://example.com/orders"/>
+    </port>
+  </service>
+
+</definitions>

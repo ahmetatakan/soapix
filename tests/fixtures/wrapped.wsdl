@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- document/wrapped stil — açık wrapper element adı operasyon adından farklı -->
+<definitions
+    name="ProductService"
+    targetNamespace="http://example.com/products"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/products"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/products">
+
+      <!-- Wrapped request: wrapper element adı == operation adı -->
+      <xsd:element name="SearchProducts">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="query"    type="xsd:string"/>
+            <xsd:element name="maxItems" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="category" type="xsd:string" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="SearchProductsResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="total" type="xsd:int"/>
+            <xsd:element name="item"  type="tns:Product" minOccurs="0"
+                         maxOccurs="unbounded"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:complexType name="Product">
+        <xsd:sequence>
+          <xsd:element name="id"    type="xsd:int"/>
+          <xsd:element name="name"  type="xsd:string"/>
+          <xsd:element name="price" type="xsd:decimal"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+    </xsd:schema>
+  </types>
+
+  <message name="SearchProductsRequest">
+    <part name="parameters" element="tns:SearchProducts"/>
+  </message>
+  <message name="SearchProductsResponse">
+    <part name="parameters" element="tns:SearchProductsResponse"/>
+  </message>
+
+  <portType name="ProductPortType">
+    <operation name="SearchProducts">
+      <documentation>Ürün kataloğunda arama yapar.</documentation>
+      <input  message="tns:SearchProductsRequest"/>
+      <output message="tns:SearchProductsResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="ProductBinding" type="tns:ProductPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="SearchProducts">
+      <soap:operation soapAction="http://example.com/products/SearchProducts"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <service name="ProductService">
+    <port name="ProductPort" binding="tns:ProductBinding">
+      <soap:address location="http://example.com/products"/>
+    </port>
+  </service>
+
+</definitions>

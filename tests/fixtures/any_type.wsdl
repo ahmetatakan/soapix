@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- xsd:any içeren WSDL — anyType tolerans testi -->
+<definitions
+    name="FlexService"
+    targetNamespace="http://example.com/flex"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/flex"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/flex">
+
+      <xsd:element name="ProcessData">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id"   type="xsd:string"/>
+            <!-- Arbitrary payload — any type accepted -->
+            <xsd:any namespace="##any" minOccurs="0" maxOccurs="unbounded"
+                     processContents="lax"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="ProcessDataResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="status"  type="xsd:string"/>
+            <xsd:element name="payload" type="xsd:anyType" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+    </xsd:schema>
+  </types>
+
+  <message name="ProcessDataRequest">
+    <part name="parameters" element="tns:ProcessData"/>
+  </message>
+  <message name="ProcessDataResponse">
+    <part name="parameters" element="tns:ProcessDataResponse"/>
+  </message>
+
+  <portType name="FlexPortType">
+    <operation name="ProcessData">
+      <input  message="tns:ProcessDataRequest"/>
+      <output message="tns:ProcessDataResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="FlexBinding" type="tns:FlexPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="ProcessData">
+      <soap:operation soapAction="http://example.com/flex/ProcessData"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <service name="FlexService">
+    <port name="FlexPort" binding="tns:FlexBinding">
+      <soap:address location="http://example.com/flex"/>
+    </port>
+  </service>
+
+</definitions>
