@@ -9,7 +9,9 @@ from typing import Any
 from lxml import etree
 
 from soapix.exceptions import SerializationError
-from soapix.wsdl.namespace import NS_SOAP_ENV_11, NS_SOAP_ENV_12, NS_XSI
+import base64
+
+from soapix.wsdl.namespace import NS_SOAP_ENV_11, NS_SOAP_ENV_12, NS_XSI, NS_XMLMIME
 from soapix.wsdl.types import BindingStyle, OperationInfo, SoapVersion, WsdlDocument
 
 
@@ -59,14 +61,16 @@ class SoapBuilder:
             else NS_SOAP_ENV_11
         )
 
+        op_ns = operation.input_namespace or self._doc.target_namespace
         nsmap: dict[str, str] = {
             "soapenv": soap_env_ns,
             "xsi": NS_XSI,
         }
-        if operation.input_namespace:
-            nsmap["tns"] = operation.input_namespace
+        if op_ns:
+            nsmap["tns"] = op_ns
 
         envelope = etree.Element(f"{{{soap_env_ns}}}Envelope", nsmap=nsmap)
+        etree.SubElement(envelope, f"{{{soap_env_ns}}}Header")
         body = etree.SubElement(envelope, f"{{{soap_env_ns}}}Body")
 
         self._build_body(body, operation, params, soap_env_ns)
@@ -106,22 +110,20 @@ class SoapBuilder:
         """Build document/literal body — auto-detects document/wrapped."""
         input_params = operation.input_params
 
-        # document/wrapped detection:
-        # Single message part whose element name matches the operation name.
-        is_wrapped = (
-            len(input_params) == 1
-            and input_params[0].type_name == operation.name
-        ) or operation.input_wrapper is not None
-
-        wrapper_name = operation.input_wrapper or operation.name
-
-        if is_wrapped or not input_params:
+        # Single-part messages always use the part's element as the body wrapper.
+        # This covers both classic wrapped (element name == operation name) and
+        # element-reference patterns where the element name differs from the
+        # operation name (e.g. sendDocument → documentRequest).
+        if not input_params or len(input_params) == 1:
+            wrapper_name = (
+                operation.input_wrapper
+                or (input_params[0].type_name if input_params else operation.name)
+            )
             wrapper = etree.SubElement(body, f"{{{tns}}}{wrapper_name}")
-            # Resolve actual type fields from WsdlDocument, not the raw message part
             fields = self._resolve_type_fields(wrapper_name, tns)
             self._serialize_params(wrapper, fields, params, tns)
         else:
-            # Bare document/literal: each part is a top-level element
+            # Bare document/literal: multiple parts, each is a top-level body element
             for param in input_params:
                 self._serialize_value(
                     body, param.name, params.get(param.name), param.type_name, tns
@@ -161,8 +163,10 @@ class SoapBuilder:
                     got=None,
                 )
 
-            # Skip None optional params in tolerant mode (don't add nil element)
-            if value is None and not param.required and not self._strict:
+            # Optional None → empty element <field/> (standard SOAP behavior)
+            # Required None → xsi:nil (handled inside _serialize_value)
+            if value is None and not param.required:
+                etree.SubElement(parent, param.name)
                 continue
 
             self._serialize_value(parent, param.name, value, param.type_name, tns)
@@ -189,6 +193,15 @@ class SoapBuilder:
         el = etree.SubElement(parent, name)
 
         if isinstance(value, dict):
+            # Special dict syntax for xmlmime base64Binary with contentType attribute:
+            #   {"value": b"...", "contentType": "application/xml"}
+            if "value" in value and "contentType" in value:
+                raw = value["value"]
+                content_type = value["contentType"]
+                el.set(f"{{{NS_XMLMIME}}}contentType", content_type)
+                el.text = base64.b64encode(raw).decode() if isinstance(raw, (bytes, bytearray)) else str(raw)
+                return
+
             # anyType / complex type passed as dict — serialize recursively
             child_fields = self._resolve_type_fields(type_name, tns)
             if child_fields:
@@ -196,6 +209,11 @@ class SoapBuilder:
             else:
                 for k, v in value.items():
                     self._serialize_value(el, k, v, "anyType", tns)
+            return
+
+        # bytes → base64Binary
+        if isinstance(value, (bytes, bytearray)):
+            el.text = base64.b64encode(value).decode()
             return
 
         if isinstance(value, bool):
@@ -209,12 +227,24 @@ class SoapBuilder:
     # Type resolution
     # ------------------------------------------------------------------
 
-    def _resolve_type_fields(self, type_name: str, tns: str) -> list[Any]:
+    def _resolve_type_fields(
+        self,
+        type_name: str,
+        tns: str,
+        _visited: frozenset[str] | None = None,
+    ) -> list[Any]:
         """
         Look up the fields of a complex type by name.
-        Tries qualified key {tns}name first, then searches by bare name.
-        Returns empty list for unknown / primitive types (anyType fallback).
+        Follows base_type references (element → named complexType, and
+        xs:extension inheritance) to return the full field list.
         """
+        if ":" in type_name:
+            type_name = type_name.split(":", 1)[1]
+
+        _visited = _visited or frozenset()
+        if type_name in _visited:
+            return []
+
         key = f"{{{tns}}}{type_name}" if tns else type_name
         type_info = self._doc.types.get(key)
         if type_info is None:
@@ -222,4 +252,13 @@ class SoapBuilder:
                 if t.name == type_name:
                     type_info = t
                     break
-        return type_info.fields if type_info else []
+        if type_info is None:
+            return []
+
+        own_fields = type_info.fields
+        if type_info.base_type:
+            base_fields = self._resolve_type_fields(
+                type_info.base_type, tns, _visited | {type_name}
+            )
+            return base_fields + own_fields
+        return own_fields

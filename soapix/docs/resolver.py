@@ -48,13 +48,38 @@ def _resolve_params(
     return params
 
 
-def _expand_type(type_name: str, doc: WsdlDocument) -> list[ParameterInfo]:
+def _expand_type(
+    type_name: str,
+    doc: WsdlDocument,
+    _visited: set[str] | None = None,
+) -> list[ParameterInfo]:
     """
     Look up type_name in doc.types and return its fields.
+
+    Follows base_type references so that element→complexType chains work:
+      documentRequest (element, type=documentType) → documentType (has fields)
     Returns empty list if not found or if type has no fields.
     """
-    # Try with each registered namespace
-    for key, type_info in doc.types.items():
-        if type_info.name == type_name and type_info.fields:
-            return type_info.fields
+    if _visited is None:
+        _visited = set()
+
+    # Strip namespace prefix (e.g. "tns:documentType" → "documentType")
+    if ":" in type_name:
+        type_name = type_name.split(":", 1)[1]
+
+    if type_name in _visited:
+        return []
+    _visited.add(type_name)
+
+    for type_info in doc.types.values():
+        if type_info.name == type_name:
+            own_fields = type_info.fields
+            if type_info.base_type:
+                # Covers two cases:
+                #   • element → named complexType (own_fields=[])
+                #   • xs:extension base (own_fields = extended fields, prepend base fields)
+                base_fields = _expand_type(type_info.base_type, doc, _visited)
+                return base_fields + own_fields
+            return own_fields
+
     return []

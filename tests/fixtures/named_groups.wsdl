@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Bug 3: xs:group ref="..." — named model group fields must be included -->
+<definitions
+    name="GroupService"
+    targetNamespace="http://example.com/groupservice"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/groupservice"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/groupservice">
+
+      <!-- Named model group — reusable field set -->
+      <xsd:group name="PersonGroup">
+        <xsd:sequence>
+          <xsd:element name="firstName" type="xsd:string"/>
+          <xsd:element name="lastName"  type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:group>
+
+      <!-- ComplexType that references the group -->
+      <xsd:complexType name="EmployeeType">
+        <xsd:sequence>
+          <xsd:element name="employeeId" type="xsd:int"/>
+          <xsd:group ref="tns:PersonGroup"/>
+          <xsd:element name="department"  type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:element name="GetEmployee"         type="xsd:int"/>
+      <xsd:element name="GetEmployeeResponse" type="tns:EmployeeType"/>
+
+    </xsd:schema>
+  </types>
+
+  <message name="GetEmployeeRequest">
+    <part name="id" element="tns:GetEmployee"/>
+  </message>
+  <message name="GetEmployeeResponse">
+    <part name="parameters" element="tns:GetEmployeeResponse"/>
+  </message>
+
+  <portType name="GroupServicePortType">
+    <operation name="GetEmployee">
+      <input  message="tns:GetEmployeeRequest"/>
+      <output message="tns:GetEmployeeResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="GroupServiceBinding" type="tns:GroupServicePortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="GetEmployee">
+      <soap:operation soapAction="GetEmployee"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <service name="GroupService">
+    <port name="GroupServicePort" binding="tns:GroupServiceBinding">
+      <soap:address location="http://example.com/groupservice"/>
+    </port>
+  </service>
+
+</definitions>

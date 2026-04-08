@@ -101,12 +101,31 @@ class WsdlParser:
             soap_version=soap_version,
         )
 
+        # Named model groups collected during type parsing (local_name → element)
+        self._schema_groups: dict[str, etree._Element] = {}
+
         # Parse in dependency order
         self._parse_types(root, doc, resolver)
         messages = self._parse_messages(root, target_ns)
         port_types = self._parse_port_types(root, messages, target_ns)
         bindings = self._parse_bindings(root, port_types, soap_version, target_ns)
         self._parse_services(root, doc, bindings, target_ns)
+
+        # Bug 5: WSDL without wsdl:service — populate operations from first binding
+        if not doc.operations and bindings:
+            first_binding = next(iter(bindings.values()))
+            for op_name, op_data in first_binding.get("ops", {}).items():
+                doc.operations[op_name] = OperationInfo(
+                    name=op_name,
+                    endpoint="",
+                    soap_action=op_data["soap_action"],
+                    soap_version=doc.soap_version,
+                    style=op_data["style"],
+                    use=op_data["use"],
+                    input_params=op_data["input"],
+                    output_params=op_data["output"],
+                    documentation=op_data["documentation"],
+                )
 
         return doc
 
@@ -205,6 +224,12 @@ class WsdlParser:
                         base_type=type_name,
                     )
 
+            elif local == "group" and name:
+                # Store named model group for xs:group ref="..." resolution (Bug 3)
+                self._schema_groups[name] = child
+                if tns:
+                    self._schema_groups[f"{{{tns}}}{name}"] = child
+
     def _parse_complex_type(
         self,
         element: etree._Element,
@@ -247,9 +272,27 @@ class WsdlParser:
                         required=False,
                     )
                 )
+            elif local == "extension":
+                # Bug 2: capture base type for inheritance; then descend for own fields
+                base = child.get("base", "")
+                if base:
+                    if ":" in base:
+                        base = base.split(":", 1)[1]
+                    type_info.base_type = base
+                self._collect_fields(child, type_info, tns, seen, depth + 1)
+            elif local == "group":
+                # Bug 3: xs:group ref="..." — resolve named model group
+                ref = child.get("ref", "")
+                if ref:
+                    if ":" in ref:
+                        ref = ref.split(":", 1)[1]
+                    group_el = self._schema_groups.get(ref)
+                    if group_el is not None:
+                        self._collect_fields(group_el, type_info, tns, seen, depth + 1)
+                else:
+                    self._collect_fields(child, type_info, tns, seen, depth + 1)
             elif local in ("sequence", "all", "choice", "complexContent",
-                           "simpleContent", "extension", "restriction",
-                           "group", "attributeGroup"):
+                           "simpleContent", "restriction", "attributeGroup"):
                 # Descend into structural/grouping elements
                 self._collect_fields(child, type_info, tns, seen, depth + 1)
 
@@ -258,7 +301,29 @@ class WsdlParser:
     ) -> ParameterInfo | None:
         name = element.get("name", "")
         if not name:
-            return None
+            # Bug 1: xs:element ref="tns:SomeElement" — use ref local name
+            ref = element.get("ref", "")
+            if not ref:
+                return None
+            if ":" in ref:
+                name = ref.split(":", 1)[1]
+            else:
+                name = ref
+            type_name = name  # resolved by docs layer via doc.types
+
+            min_occurs = int(element.get("minOccurs", "1"))
+            max_occurs_raw = element.get("maxOccurs", "1")
+            max_occurs = None if max_occurs_raw == "unbounded" else int(max_occurs_raw)
+            nillable = element.get("nillable", "false").lower() == "true"
+
+            return ParameterInfo(
+                name=name,
+                type_name=type_name,
+                namespace=tns,
+                required=min_occurs > 0 and not nillable,
+                min_occurs=min_occurs,
+                max_occurs=max_occurs,
+            )
 
         type_name = element.get("type", "anyType")
         if ":" in type_name:

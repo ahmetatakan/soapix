@@ -24,6 +24,11 @@ def soap12_doc():
     return WsdlParser().load(str(FIXTURES / "soap12.wsdl"))
 
 
+@pytest.fixture
+def gib_doc():
+    return WsdlParser().load(str(FIXTURES / "gib_efatura.wsdl"))
+
+
 class TestSoapBuilder:
     def test_builds_valid_xml(self, simple_doc):
         builder = SoapBuilder(simple_doc)
@@ -44,8 +49,9 @@ class TestSoapBuilder:
         op = simple_doc.get_operation("GetUser")
         envelope_bytes = builder.build(op, {"userId": 123})
         root = etree.fromstring(envelope_bytes)
-        body = root[0]
-        assert "Body" in body.tag
+        tags = [etree.QName(child.tag).localname for child in root]
+        assert "Header" in tags
+        assert "Body" in tags
 
     def test_parameter_included(self, simple_doc):
         builder = SoapBuilder(simple_doc)
@@ -82,3 +88,33 @@ class TestSoapBuilder:
         op = simple_doc.get_operation("GetUser")
         result = builder.build(op, {"userId": 1})
         assert isinstance(result, bytes)
+
+
+class TestGibEFaturaBuilder:
+    """Builder must use element name (documentRequest), not part name (document)."""
+
+    def test_body_element_is_document_request(self, gib_doc):
+        builder = SoapBuilder(gib_doc, debug=True)
+        op = gib_doc.get_operation("sendDocument")
+        xml = builder.build(op, {"fileName": "test.xml"}).decode()
+        assert "documentRequest" in xml
+        assert "<document" not in xml
+
+    def test_body_element_is_namespace_qualified(self, gib_doc):
+        builder = SoapBuilder(gib_doc, debug=True)
+        op = gib_doc.get_operation("sendDocument")
+        xml = builder.build(op, {"fileName": "test.xml"}).decode()
+        assert "gib.gov.tr/vedop3/eFatura" in xml
+
+    def test_field_values_serialized(self, gib_doc):
+        builder = SoapBuilder(gib_doc, debug=True)
+        op = gib_doc.get_operation("sendDocument")
+        xml = builder.build(op, {"fileName": "GETUSRL#", "hash": "abc123"}).decode()
+        assert "GETUSRL#" in xml
+        assert "abc123" in xml
+
+    def test_tns_prefix_declared(self, gib_doc):
+        builder = SoapBuilder(gib_doc)
+        op = gib_doc.get_operation("sendDocument")
+        xml = builder.build(op, {"fileName": "x"}).decode()
+        assert 'xmlns:tns' in xml

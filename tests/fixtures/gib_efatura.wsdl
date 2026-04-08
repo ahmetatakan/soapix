@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- GIB eFatura style WSDL: elements reference named complexTypes (not inline) -->
+<wsdl:definitions
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://gib.gov.tr/vedop3/eFatura"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    name="EFatura"
+    targetNamespace="http://gib.gov.tr/vedop3/eFatura">
+
+  <wsdl:types>
+
+    <!-- xmlmime schema (external in real WSDL, inlined here for test) -->
+    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+               xmlns:tns="http://www.w3.org/2005/05/xmlmime"
+               targetNamespace="http://www.w3.org/2005/05/xmlmime"
+               version="1.0">
+      <xs:complexType name="base64Binary">
+        <xs:simpleContent>
+          <xs:extension base="xs:base64Binary">
+            <xs:attribute ref="tns:contentType"/>
+          </xs:extension>
+        </xs:simpleContent>
+      </xs:complexType>
+      <xs:attribute name="contentType" type="xs:string"/>
+    </xs:schema>
+
+    <!-- Main eFatura schema: elements reference named complexTypes -->
+    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+               xmlns:tns="http://gib.gov.tr/vedop3/eFatura"
+               xmlns:ns1="http://www.w3.org/2005/05/xmlmime"
+               targetNamespace="http://gib.gov.tr/vedop3/eFatura"
+               version="1.0">
+
+      <xs:import namespace="http://www.w3.org/2005/05/xmlmime"/>
+
+      <!-- Elements reference named types (not inline complexType) -->
+      <xs:element name="documentRequest"        type="tns:documentType"/>
+      <xs:element name="documentResponse"       type="tns:documentReturnType"/>
+      <xs:element name="getAddressInfoRequest"  type="tns:AddressInfoRequestType"/>
+      <xs:element name="getAddressInfoResponse" type="tns:AddressInfoResponseType"/>
+      <xs:element name="EFaturaFault"           type="tns:EFaturaFaultType"/>
+
+      <xs:complexType name="documentType">
+        <xs:sequence>
+          <xs:element minOccurs="0" name="fileName"   type="xs:string"/>
+          <xs:element minOccurs="0" name="binaryData" type="ns1:base64Binary"/>
+          <xs:element minOccurs="0" name="hash"       type="xs:string"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="documentReturnType">
+        <xs:sequence>
+          <xs:element minOccurs="0" name="msg"             type="xs:string"/>
+          <xs:element minOccurs="0" name="hash"            type="xs:string"/>
+          <xs:element minOccurs="0" name="httpStatus"      type="xs:string"/>
+          <xs:element minOccurs="0" name="responseMessage" type="xs:string"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="AddressInfoRequestType">
+        <xs:sequence>
+          <xs:element name="identifier" type="xs:string"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="AddressInfoResponseType">
+        <xs:sequence>
+          <xs:element minOccurs="0" name="addressFound" type="xs:boolean"/>
+          <xs:element minOccurs="0" maxOccurs="unbounded" name="aliasList" type="xs:string"/>
+          <xs:element name="identifier" type="xs:string"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="EFaturaFaultType">
+        <xs:sequence>
+          <xs:element minOccurs="0" name="code" type="xs:int"/>
+          <xs:element minOccurs="0" name="msg"  type="xs:string"/>
+        </xs:sequence>
+      </xs:complexType>
+
+    </xs:schema>
+  </wsdl:types>
+
+  <!-- Messages -->
+  <wsdl:message name="sendDocument">
+    <wsdl:part element="tns:documentRequest" name="document"/>
+  </wsdl:message>
+  <wsdl:message name="sendDocumentResponse">
+    <wsdl:part element="tns:documentResponse" name="sendDocumentReturn"/>
+  </wsdl:message>
+  <wsdl:message name="getAddressInfo">
+    <wsdl:part element="tns:getAddressInfoRequest" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="getAddressInfoResponse">
+    <wsdl:part element="tns:getAddressInfoResponse" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="EFaturaFaultMessage">
+    <wsdl:part element="tns:EFaturaFault" name="EFaturaFaultMessage"/>
+  </wsdl:message>
+
+  <!-- Port Type -->
+  <wsdl:portType name="EFaturaPortType">
+    <wsdl:operation name="sendDocument">
+      <wsdl:input  message="tns:sendDocument"         name="sendDocument"/>
+      <wsdl:output message="tns:sendDocumentResponse" name="sendDocumentResponse"/>
+      <wsdl:fault  message="tns:EFaturaFaultMessage"  name="EFaturaFaultMessage"/>
+    </wsdl:operation>
+    <wsdl:operation name="getAddressInfo">
+      <wsdl:input  message="tns:getAddressInfo"         name="getAddressInfo"/>
+      <wsdl:output message="tns:getAddressInfoResponse" name="getAddressInfoResponse"/>
+      <wsdl:fault  message="tns:EFaturaFaultMessage"    name="EFaturaFaultMessage"/>
+    </wsdl:operation>
+  </wsdl:portType>
+
+  <!-- Binding -->
+  <wsdl:binding name="EFaturaSoapBinding" type="tns:EFaturaPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <wsdl:operation name="sendDocument">
+      <soap:operation soapAction="sendDocument" style="document"/>
+      <wsdl:input  name="sendDocument">         <soap:body use="literal"/> </wsdl:input>
+      <wsdl:output name="sendDocumentResponse"> <soap:body use="literal"/> </wsdl:output>
+      <wsdl:fault  name="EFaturaFaultMessage">  <soap:fault name="EFaturaFaultMessage" use="literal"/> </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="getAddressInfo">
+      <soap:operation soapAction="getAddressInfo" style="document"/>
+      <wsdl:input  name="getAddressInfo">         <soap:body use="literal"/> </wsdl:input>
+      <wsdl:output name="getAddressInfoResponse"> <soap:body use="literal"/> </wsdl:output>
+      <wsdl:fault  name="EFaturaFaultMessage">    <soap:fault name="EFaturaFaultMessage" use="literal"/> </wsdl:fault>
+    </wsdl:operation>
+  </wsdl:binding>
+
+  <!-- Service -->
+  <wsdl:service name="EFatura">
+    <wsdl:port binding="tns:EFaturaSoapBinding" name="EFaturaSoap12">
+      <soap:address location="https://efatura.example.com/EFaturaSoap12"/>
+    </wsdl:port>
+  </wsdl:service>
+
+</wsdl:definitions>

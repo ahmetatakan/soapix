@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Bug 5: No wsdl:service element — operations must still be discoverable -->
+<definitions
+    name="NoServiceWsdl"
+    targetNamespace="http://example.com/noservice"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/noservice"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/noservice">
+      <xsd:element name="Ping">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="message" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="PingResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="reply" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+    </xsd:schema>
+  </types>
+
+  <message name="PingRequest">
+    <part name="parameters" element="tns:Ping"/>
+  </message>
+  <message name="PingResponse">
+    <part name="parameters" element="tns:PingResponse"/>
+  </message>
+
+  <portType name="NoServicePortType">
+    <operation name="Ping">
+      <input  message="tns:PingRequest"/>
+      <output message="tns:PingResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="NoServiceBinding" type="tns:NoServicePortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="Ping">
+      <soap:operation soapAction="Ping"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <!-- Intentionally no wsdl:service element -->
+
+</definitions>

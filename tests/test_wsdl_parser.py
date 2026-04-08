@@ -110,3 +110,158 @@ class TestErrorHandling:
         bad_file.write_text("this is not xml at all <<<")
         with pytest.raises(WsdlNotFoundError, match="is not valid XML"):
             parser.load(str(bad_file))
+
+
+class TestElementRef:
+    """Bug 1: xs:element ref="..." — referenced elements must appear as fields."""
+
+    def test_operation_found(self, parser):
+        doc = parser.load(str(FIXTURES / "element_ref.wsdl"))
+        assert "GetPerson" in doc.operations
+
+    def test_ref_field_appears_in_input(self, parser):
+        from soapix.docs.resolver import resolve_input_fields
+        doc = parser.load(str(FIXTURES / "element_ref.wsdl"))
+        op = doc.get_operation("GetPerson")
+        fields = resolve_input_fields(op, doc)
+        assert any(f.name == "sharedId" for f in fields)
+
+    def test_ref_fields_appear_in_output(self, parser):
+        from soapix.docs.resolver import resolve_output_fields
+        doc = parser.load(str(FIXTURES / "element_ref.wsdl"))
+        op = doc.get_operation("GetPerson")
+        fields = resolve_output_fields(op, doc)
+        field_names = [f.name for f in fields]
+        assert "sharedId" in field_names
+        assert "sharedName" in field_names
+        assert "email" in field_names
+
+
+class TestTypeExtension:
+    """Bug 2: xs:extension base="..." — inherited fields must be included."""
+
+    def test_operation_found(self, parser):
+        doc = parser.load(str(FIXTURES / "type_extension.wsdl"))
+        assert "GetUser" in doc.operations
+
+    def test_own_fields_present(self, parser):
+        from soapix.docs.resolver import resolve_output_fields
+        doc = parser.load(str(FIXTURES / "type_extension.wsdl"))
+        op = doc.get_operation("GetUser")
+        fields = resolve_output_fields(op, doc)
+        field_names = [f.name for f in fields]
+        assert "name" in field_names
+        assert "email" in field_names
+
+    def test_inherited_fields_present(self, parser):
+        from soapix.docs.resolver import resolve_output_fields
+        doc = parser.load(str(FIXTURES / "type_extension.wsdl"))
+        op = doc.get_operation("GetUser")
+        fields = resolve_output_fields(op, doc)
+        field_names = [f.name for f in fields]
+        assert "id" in field_names
+        assert "createdAt" in field_names
+
+    def test_inherited_fields_come_first(self, parser):
+        from soapix.docs.resolver import resolve_output_fields
+        doc = parser.load(str(FIXTURES / "type_extension.wsdl"))
+        op = doc.get_operation("GetUser")
+        fields = resolve_output_fields(op, doc)
+        names = [f.name for f in fields]
+        assert names.index("id") < names.index("name")
+
+
+class TestNamedGroups:
+    """Bug 3: xs:group ref="..." — named model group fields must be included."""
+
+    def test_operation_found(self, parser):
+        doc = parser.load(str(FIXTURES / "named_groups.wsdl"))
+        assert "GetEmployee" in doc.operations
+
+    def test_group_fields_present(self, parser):
+        from soapix.docs.resolver import resolve_output_fields
+        doc = parser.load(str(FIXTURES / "named_groups.wsdl"))
+        op = doc.get_operation("GetEmployee")
+        fields = resolve_output_fields(op, doc)
+        field_names = [f.name for f in fields]
+        assert "firstName" in field_names
+        assert "lastName" in field_names
+
+    def test_non_group_fields_present(self, parser):
+        from soapix.docs.resolver import resolve_output_fields
+        doc = parser.load(str(FIXTURES / "named_groups.wsdl"))
+        op = doc.get_operation("GetEmployee")
+        fields = resolve_output_fields(op, doc)
+        field_names = [f.name for f in fields]
+        assert "employeeId" in field_names
+        assert "department" in field_names
+
+
+class TestNoServiceElement:
+    """Bug 5: WSDL without wsdl:service — operations must still be discoverable."""
+
+    def test_operations_found_without_service(self, parser):
+        doc = parser.load(str(FIXTURES / "no_service.wsdl"))
+        assert "Ping" in doc.operations
+
+    def test_service_list_is_empty(self, parser):
+        doc = parser.load(str(FIXTURES / "no_service.wsdl"))
+        assert doc.services == []
+
+    def test_endpoint_is_empty_string(self, parser):
+        doc = parser.load(str(FIXTURES / "no_service.wsdl"))
+        assert doc.endpoint == ""
+
+    def test_operation_has_input_params(self, parser):
+        from soapix.docs.resolver import resolve_input_fields
+        doc = parser.load(str(FIXTURES / "no_service.wsdl"))
+        op = doc.get_operation("Ping")
+        fields = resolve_input_fields(op, doc)
+        assert any(f.name == "message" for f in fields)
+
+
+class TestGibEFatura:
+    """GIB eFatura style: elements reference named complexTypes (no inline types)."""
+
+    def test_loads_without_error(self, parser):
+        doc = parser.load(str(FIXTURES / "gib_efatura.wsdl"))
+        assert doc is not None
+
+    def test_service_name(self, parser):
+        doc = parser.load(str(FIXTURES / "gib_efatura.wsdl"))
+        assert doc.service_name == "EFatura"
+
+    def test_operations_discovered(self, parser):
+        doc = parser.load(str(FIXTURES / "gib_efatura.wsdl"))
+        assert "sendDocument" in doc.operations
+        assert "getAddressInfo" in doc.operations
+
+    def test_send_document_input_params_resolved(self, parser):
+        from soapix.docs.resolver import resolve_input_fields
+        doc = parser.load(str(FIXTURES / "gib_efatura.wsdl"))
+        op = doc.get_operation("sendDocument")
+        fields = resolve_input_fields(op, doc)
+        field_names = [f.name for f in fields]
+        assert "fileName" in field_names
+        assert "binaryData" in field_names
+        assert "hash" in field_names
+
+    def test_send_document_output_params_resolved(self, parser):
+        from soapix.docs.resolver import resolve_output_fields
+        doc = parser.load(str(FIXTURES / "gib_efatura.wsdl"))
+        op = doc.get_operation("sendDocument")
+        fields = resolve_output_fields(op, doc)
+        field_names = [f.name for f in fields]
+        assert "msg" in field_names
+        assert "httpStatus" in field_names
+
+    def test_get_address_info_params_resolved(self, parser):
+        from soapix.docs.resolver import resolve_input_fields
+        doc = parser.load(str(FIXTURES / "gib_efatura.wsdl"))
+        op = doc.get_operation("getAddressInfo")
+        fields = resolve_input_fields(op, doc)
+        assert any(f.name == "identifier" for f in fields)
+
+    def test_endpoint_present(self, parser):
+        doc = parser.load(str(FIXTURES / "gib_efatura.wsdl"))
+        assert "efatura.example.com" in doc.endpoint

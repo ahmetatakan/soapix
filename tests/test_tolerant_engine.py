@@ -36,14 +36,14 @@ class TestTolerantValidation:
         envelope = builder.build(op, {"userId": 1})
         assert envelope is not None
 
-    def test_missing_optional_param_not_in_xml(self):
-        """Tolerant modda opsiyonel None parametre XML'e eklenmemeli."""
+    def test_missing_optional_param_sent_as_empty(self):
+        """Optional None param must be sent as empty element (standard SOAP behavior)."""
         doc = WsdlParser().load(str(FIXTURES / "simple.wsdl"))
         builder = SoapBuilder(doc, strict=False)
         op = doc.get_operation("GetUser")
         xml = builder.build(op, {"userId": 1}).decode("utf-8")
-        # locale not passed → should not appear in XML
-        assert "locale" not in xml
+        # locale not passed → sent as <locale/> empty element
+        assert "<locale/>" in xml
 
     def test_missing_required_strict_raises(self):
         """In strict mode, a missing required parameter should raise SerializationError."""
@@ -88,14 +88,14 @@ class TestWrappedDetection:
         assert "SearchProducts" in xml
         assert "laptop" in xml
 
-    def test_wrapped_optional_params_omitted(self):
+    def test_wrapped_optional_params_sent_as_empty(self):
         doc = WsdlParser().load(str(FIXTURES / "wrapped.wsdl"))
         builder = SoapBuilder(doc, strict=False)
         op = doc.get_operation("SearchProducts")
         xml = builder.build(op, {"query": "laptop"}).decode("utf-8")
-        # maxItems and category are optional — omitted when not passed
-        assert "maxItems" not in xml
-        assert "category" not in xml
+        # maxItems and category are optional — sent as empty elements
+        assert "<maxItems/>" in xml
+        assert "<category/>" in xml
 
     def test_wrapped_with_all_params(self):
         doc = WsdlParser().load(str(FIXTURES / "wrapped.wsdl"))

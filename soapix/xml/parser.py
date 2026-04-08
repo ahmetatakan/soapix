@@ -34,10 +34,13 @@ class SoapResponseParser:
         self._doc = wsdl_doc
         self._strict = strict
 
+    # Parser instance with huge_tree enabled for large base64 payloads
+    _huge_parser = etree.XMLParser(huge_tree=True)
+
     def parse(self, response_xml: bytes, operation: OperationInfo) -> Any:
         """Parse the raw response bytes and return a Python dict."""
         try:
-            root = etree.fromstring(response_xml)
+            root = etree.fromstring(response_xml, self._huge_parser)
         except etree.XMLSyntaxError as e:
             from soapix.exceptions import SoapCallError
             raise SoapCallError(
@@ -91,7 +94,7 @@ class SoapResponseParser:
         """Extract fault details and raise SoapFaultError."""
         fault_code = ""
         fault_string = ""
-        detail = ""
+        detail_el: etree._Element | None = None
 
         for child in fault_el:
             local = localname(child.tag)
@@ -102,12 +105,24 @@ class SoapResponseParser:
                 val = child.find(".//{*}Text")
                 fault_string = (val.text or "").strip() if val is not None else (child.text or "").strip()
             elif local == "detail":
-                detail = etree.tostring(child, encoding="unicode")
+                detail_el = child
+
+        # If faultstring is missing, try to extract a message from structured
+        # fault detail (e.g. <EFaturaFault><msg>...</msg></EFaturaFault>)
+        if not fault_string and detail_el is not None:
+            for msg_el in detail_el.iter():
+                if localname(msg_el.tag) in ("msg", "message", "faultMessage", "text"):
+                    text = (msg_el.text or "").strip()
+                    if text:
+                        fault_string = text
+                        break
+
+        detail_str = etree.tostring(detail_el, encoding="unicode") if detail_el is not None else None
 
         raise SoapFaultError(
             fault_code=fault_code or "Unknown",
             fault_string=fault_string or "Unknown fault",
-            detail=detail or None,
+            detail=detail_str,
             method=operation.name,
             endpoint=operation.endpoint,
         )

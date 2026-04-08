@@ -13,6 +13,7 @@ NS_SOAP_ENV_11 = "http://schemas.xmlsoap.org/soap/envelope/"
 NS_SOAP_ENV_12 = "http://www.w3.org/2003/05/soap-envelope"
 NS_XSD = "http://www.w3.org/2001/XMLSchema"
 NS_XSI = "http://www.w3.org/2001/XMLSchema-instance"
+NS_XMLMIME = "http://www.w3.org/2005/05/xmlmime"
 
 
 def normalize_namespace(uri: str) -> str:
