@@ -334,6 +334,7 @@ except HttpError as e:
     print(f"HTTP error: {e}")
 ```
 
+
 Error messages include structured context:
 
 ```
