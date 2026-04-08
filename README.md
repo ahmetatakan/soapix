@@ -2,11 +2,11 @@
 
 A tolerant, self-documenting Python SOAP client library.
 
-soapix is designed to work with real-world SOAP services that don't perfectly 
-follow the spec — handling namespace quirks, loose validation, and unclear error 
+soapix is designed to work with real-world SOAP services that don't perfectly
+follow the spec — handling namespace quirks, loose validation, and unclear error
 messages that break other libraries.
 
-Built for the real world: where WSDL files are messy, error messages are cryptic, 
+Built for the real world: where WSDL files are messy, error messages are cryptic,
 and you need async out of the box.
 
 ## Features
@@ -91,6 +91,7 @@ result = client.service.GetUser(userId=None)
 
 The return value is a plain Python `dict` (or scalar for leaf values). Nested elements become nested dicts; repeated elements become lists.
 
+```python
 # Nested elements → nested dicts
 result = client.service.GetOrder(orderId=1)
 # {
@@ -102,7 +103,6 @@ result = client.service.GetOrder(orderId=1)
 #   ]
 # }
 
-```python
 result = client.service.GetUser(userId=1)
 # {"userId": 1, "name": "Alice", "email": "alice@example.com", "active": True}
 ```
@@ -245,11 +245,11 @@ cache = FileCache(
     ttl=3600,                   # Seconds until entries expire (default: 3600)
 )
 
-> **Note:** FileCache uses `pickle` for serialisation. Only use it with WSDL 
-> sources you trust — do not load cache files from untrusted or user-supplied paths.
-
 client = SoapClient("http://service.example.com/?wsdl", cache=cache)
 ```
+
+> **Note:** FileCache uses `pickle` for serialisation. Only use it with WSDL
+> sources you trust — do not load cache files from untrusted or user-supplied paths.
 
 ### Disable caching
 
@@ -268,20 +268,21 @@ soapix can generate human-readable documentation from the WSDL — terminal outp
 
 ```python
 client.docs()
-# Prints a formatted table with all operations, parameters, types, and example calls.
 ```
 
-# ┌─────────────────────────────────────────────────────────┐
-# │  UserService                                            │
-# ├──────────────┬───────────────┬──────────┬──────────────┤
-# │  Operation   │  Parameter    │  Type    │  Required    │
-# ├──────────────┼───────────────┼──────────┼──────────────┤
-# │  GetUser     │  userId       │  int     │  Yes         │
-# │              │  locale       │  string  │  No          │
-# ├──────────────┼───────────────┼──────────┼──────────────┤
-# │  CreateUser  │  name         │  string  │  Yes         │
-# │              │  email        │  string  │  Yes         │
-# └──────────────┴───────────────┴──────────┴──────────────┘
+```
+┌─────────────────────────────────────────────────────────┐
+│  UserService                                            │
+├──────────────┬───────────────┬──────────┬──────────────┤
+│  Operation   │  Parameter    │  Type    │  Required    │
+├──────────────┼───────────────┼──────────┼──────────────┤
+│  GetUser     │  userId       │  int     │  Yes         │
+│              │  locale       │  string  │  No          │
+├──────────────┼───────────────┼──────────┼──────────────┤
+│  CreateUser  │  name         │  string  │  Yes         │
+│              │  email        │  string  │  Yes         │
+└──────────────┴───────────────┴──────────┴──────────────┘
+```
 
 ### Markdown
 
@@ -365,7 +366,6 @@ except HttpError as e:
     print(f"HTTP error: {e}")
 ```
 
-
 Error messages include structured context:
 
 ```
@@ -409,17 +409,11 @@ Retries apply to `HttpError` (connection failures) and `TimeoutError`. Server-si
 | Type stubs | Partial | No | Yes |
 | Python 3.10+ | Yes | No | Yes |
 
-
 > **Notes:**
-> - *Zeep meaningful errors:* Zeep raises structured `Fault` exceptions but does 
->   not include sent payload, endpoint, or human-readable hints in the error output.
-> - *Zeep async (Partial):* Zeep supports async via a separate `AsyncTransport` 
->   configuration; soapix's `AsyncSoapClient` works natively with `async/await` 
->   and no extra setup.
-> - *Zeep WSDL caching (No):* Zeep re-parses the WSDL on every instantiation by 
->   default; caching requires a custom transport wrapper.
-> - *Suds:* The original `suds` library is unmaintained. Comparison is based on 
->   `suds-community`, its last active fork.
+> - *Zeep meaningful errors:* Zeep raises structured `Fault` exceptions but does not include sent payload, endpoint, or human-readable hints in the error output.
+> - *Zeep async (Partial):* Zeep supports async via a separate `AsyncTransport` configuration; soapix's `AsyncSoapClient` works natively with `async/await` and no extra setup.
+> - *Zeep WSDL caching (No):* Zeep re-parses the WSDL on every instantiation by default; caching requires a custom transport wrapper.
+> - *Suds:* The original `suds` library is unmaintained. Comparison is based on `suds-community`, its last active fork.
 
 ---
 
