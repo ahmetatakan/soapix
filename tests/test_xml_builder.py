@@ -90,6 +90,39 @@ class TestSoapBuilder:
         assert isinstance(result, bytes)
 
 
+class TestElementFormQualified:
+    """elementFormDefault="qualified" — child elements must carry namespace prefix."""
+
+    @pytest.fixture
+    def qualified_doc(self):
+        return WsdlParser().load(str(FIXTURES / "qualified_form.wsdl"))
+
+    def test_namespace_detected(self, qualified_doc):
+        assert "http://tempuri.org/" in qualified_doc.qualified_namespaces
+
+    def test_child_elements_are_namespace_qualified(self, qualified_doc):
+        builder = SoapBuilder(qualified_doc, debug=True)
+        op = qualified_doc.get_operation("GetData")
+        xml = builder.build(op, {"pKullaniciAdi": "user", "pSifre": "pass", "pTarih": "2026-01-01"}).decode()
+        # All child elements must carry the tns namespace
+        assert 'tns:pKullaniciAdi' in xml or '{http://tempuri.org/}pKullaniciAdi' in xml
+        assert 'tns:pSifre' in xml or '{http://tempuri.org/}pSifre' in xml
+
+    def test_values_are_present(self, qualified_doc):
+        builder = SoapBuilder(qualified_doc, debug=True)
+        op = qualified_doc.get_operation("GetData")
+        xml = builder.build(op, {"pKullaniciAdi": "user123", "pSifre": "secret"}).decode()
+        assert "user123" in xml
+        assert "secret" in xml
+
+    def test_unqualified_schema_not_affected(self, simple_doc):
+        """simple.wsdl has no elementFormDefault — child elements stay unqualified."""
+        builder = SoapBuilder(simple_doc, debug=True)
+        op = simple_doc.get_operation("GetUser")
+        xml = builder.build(op, {"userId": 1}).decode()
+        assert "<userId>" in xml  # no namespace prefix
+
+
 class TestGibEFaturaBuilder:
     """Builder must use element name (documentRequest), not part name (document)."""
 

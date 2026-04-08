@@ -145,6 +145,12 @@ class SoapBuilder:
     # Serialization
     # ------------------------------------------------------------------
 
+    def _qualify(self, name: str, tns: str) -> str:
+        """Return Clark-notation name if tns uses elementFormDefault=qualified."""
+        if tns and tns in self._doc.qualified_namespaces:
+            return f"{{{tns}}}{name}"
+        return name
+
     def _serialize_params(
         self,
         parent: etree._Element,
@@ -166,10 +172,10 @@ class SoapBuilder:
             # Optional None → empty element <field/> (standard SOAP behavior)
             # Required None → xsi:nil (handled inside _serialize_value)
             if value is None and not param.required:
-                etree.SubElement(parent, param.name)
+                etree.SubElement(parent, self._qualify(param.name, tns))
                 continue
 
-            self._serialize_value(parent, param.name, value, param.type_name, tns)
+            self._serialize_value(parent, self._qualify(param.name, tns), value, param.type_name, tns)
 
     def _serialize_value(
         self,

@@ -142,6 +142,88 @@ class SoapClient:
         from soapix.docs.generator import DocsGenerator
         return DocsGenerator(self._wsdl_doc).render(output=output, path=path)
 
+    def check(self) -> None:
+        """
+        Diagnose potential WSDL parsing issues and print a report.
+
+        Checks:
+        - Operations discovered
+        - Input/output fields resolvable per operation
+        - Endpoint present
+        - elementFormDefault qualification
+        - Type resolution chain integrity
+
+        Raises nothing — prints warnings directly so the user can act before
+        making any real service call.
+        """
+        from soapix.docs.resolver import resolve_input_fields, resolve_output_fields
+        from rich.console import Console
+        from rich.table import Table
+        from rich import box
+
+        doc = self._wsdl_doc
+        c = Console()
+
+        c.print(f"\n[bold cyan]soapix check — {doc.service_name}[/bold cyan]")
+        c.print(f"[dim]Endpoint: {doc.endpoint or '(empty)'}[/dim]")
+        c.print(f"[dim]SOAP {doc.soap_version.value} | "
+                f"qualified NS: {len(doc.qualified_namespaces)}[/dim]\n")
+
+        issues: list[str] = []
+
+        # 1. Operations
+        if not doc.operations:
+            issues.append("No operations found — WSDL may not have parsed correctly")
+            c.print("[bold red]✗ No operations found[/bold red]")
+        else:
+            c.print(f"[green]✓ {len(doc.operations)} operation(s) found[/green]")
+
+        # 2. Endpoint
+        if not doc.endpoint:
+            issues.append("Endpoint is empty — wsdl:service may be missing")
+            c.print("[yellow]⚠ Endpoint is empty[/yellow]")
+        else:
+            c.print(f"[green]✓ Endpoint: {doc.endpoint}[/green]")
+
+        # 3. Per-operation field resolution
+        if doc.operations:
+            tbl = Table(box=box.SIMPLE, show_header=True, header_style="bold")
+            tbl.add_column("Operation")
+            tbl.add_column("Input fields")
+            tbl.add_column("Output fields")
+            tbl.add_column("Status")
+
+            for op_name, op in sorted(doc.operations.items()):
+                in_fields = resolve_input_fields(op, doc)
+                out_fields = resolve_output_fields(op, doc)
+
+                has_raw_input = bool(op.input_params)
+                in_resolved = len(in_fields)
+                out_resolved = len(out_fields)
+
+                if has_raw_input and in_resolved == 0:
+                    status = "[red]✗ input unresolved[/red]"
+                    issues.append(f"{op_name}: input params declared but no fields resolved")
+                else:
+                    status = "[green]✓[/green]"
+
+                tbl.add_row(
+                    op_name,
+                    str(in_resolved) if in_resolved else ("[yellow]0[/yellow]" if has_raw_input else "0"),
+                    str(out_resolved),
+                    status,
+                )
+
+            c.print(tbl)
+
+        # 4. Summary
+        if issues:
+            c.print(f"[bold red]{len(issues)} issue(s) detected:[/bold red]")
+            for issue in issues:
+                c.print(f"  [red]• {issue}[/red]")
+        else:
+            c.print("[bold green]All checks passed.[/bold green]")
+
 
 class AsyncSoapClient:
     """
@@ -241,3 +323,10 @@ class AsyncSoapClient:
     ) -> str | None:
         from soapix.docs.generator import DocsGenerator
         return DocsGenerator(self._wsdl_doc).render(output=output, path=path)
+
+    def check(self) -> None:
+        """Same diagnostics as SoapClient.check()."""
+        # Reuse SoapClient's implementation via a temporary wrapper
+        proxy = object.__new__(SoapClient)
+        proxy._wsdl_doc = self._wsdl_doc
+        proxy.check()

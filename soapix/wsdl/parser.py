@@ -170,6 +170,8 @@ class WsdlParser:
             if localname(schema.tag) != "schema":
                 continue
             tns = schema.get("targetNamespace", "")
+            if schema.get("elementFormDefault", "unqualified") == "qualified" and tns:
+                doc.qualified_namespaces.add(tns)
             self._parse_schema_types(schema, tns, doc)
 
     def _parse_schema_types(

@@ -98,6 +98,8 @@ class WsdlDocument:
     operations: dict[str, OperationInfo] = field(default_factory=dict)
     types: dict[str, TypeInfo] = field(default_factory=dict)
     soap_version: SoapVersion = SoapVersion.SOAP_11
+    # Namespaces where elementFormDefault="qualified" — child elements must be NS-prefixed
+    qualified_namespaces: set[str] = field(default_factory=set)
 
     def get_operation(self, name: str) -> OperationInfo:
         from soapix.exceptions import SoapCallError

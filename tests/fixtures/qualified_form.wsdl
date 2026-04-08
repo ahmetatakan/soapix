@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- elementFormDefault="qualified" — .NET/ASP.NET style WSDL (e.g. MNG Kargo) -->
+<wsdl:definitions
+    xmlns:s="http://www.w3.org/2001/XMLSchema"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:tns="http://tempuri.org/"
+    xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+    targetNamespace="http://tempuri.org/">
+
+  <wsdl:types>
+    <s:schema elementFormDefault="qualified" targetNamespace="http://tempuri.org/">
+
+      <s:element name="GetData">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="pKullaniciAdi" type="s:string"/>
+            <s:element minOccurs="0" maxOccurs="1" name="pSifre"        type="s:string"/>
+            <s:element minOccurs="0" maxOccurs="1" name="pTarih"        type="s:string"/>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+
+      <s:element name="GetDataResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetDataResult" type="s:string"/>
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+
+    </s:schema>
+  </wsdl:types>
+
+  <wsdl:message name="GetDataSoapIn">
+    <wsdl:part name="parameters" element="tns:GetData"/>
+  </wsdl:message>
+  <wsdl:message name="GetDataSoapOut">
+    <wsdl:part name="parameters" element="tns:GetDataResponse"/>
+  </wsdl:message>
+
+  <wsdl:portType name="ServiceSoap">
+    <wsdl:operation name="GetData">
+      <wsdl:input  message="tns:GetDataSoapIn"/>
+      <wsdl:output message="tns:GetDataSoapOut"/>
+    </wsdl:operation>
+  </wsdl:portType>
+
+  <wsdl:binding name="ServiceSoapBinding" type="tns:ServiceSoap">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <wsdl:operation name="GetData">
+      <soap:operation soapAction="http://tempuri.org/GetData" style="document"/>
+      <wsdl:input>  <soap:body use="literal"/> </wsdl:input>
+      <wsdl:output> <soap:body use="literal"/> </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+
+  <wsdl:service name="Service">
+    <wsdl:port name="ServiceSoap" binding="tns:ServiceSoapBinding">
+      <soap:address location="http://example.com/service.asmx"/>
+    </wsdl:port>
+  </wsdl:service>
+
+</wsdl:definitions>

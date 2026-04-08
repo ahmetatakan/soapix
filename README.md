@@ -319,6 +319,45 @@ gen.render(output="html",     path="api_docs.html")
 
 ---
 
+## Service Check
+
+Before making your first call to an unfamiliar service, run `check()` to diagnose potential WSDL parsing issues without sending any requests.
+
+```python
+client = SoapClient("https://service.example.com/?wsdl")
+client.check()
+```
+
+Example output:
+
+```
+soapix check — UserService
+Endpoint: https://service.example.com/
+SOAP 1.1 | qualified NS: 1
+
+✓ 5 operation(s) found
+✓ Endpoint: https://service.example.com/
+
+ Operation   Input fields  Output fields  Status
+ CreateUser  2             1              ✓
+ GetUser     2             4              ✓
+ ...
+
+All checks passed.
+```
+
+If something is wrong:
+
+```
+✗ No operations found        ← WSDL may not have parsed correctly
+⚠ Endpoint is empty          ← wsdl:service element may be missing
+✗ input unresolved           ← fields declared but type chain could not be resolved
+```
+
+`check()` is also available on `AsyncSoapClient` and can be called before entering the async context manager.
+
+---
+
 ## Error Handling
 
 soapix raises structured exceptions with actionable context.
@@ -403,6 +442,7 @@ Retries apply to `HttpError` (connection failures) and `TimeoutError`. Server-si
 | Namespace tolerance | Partial | Partial | Full |
 | Meaningful errors | No | No | Yes |
 | Auto documentation | No | No | Yes |
+| Service diagnostics (`check()`) | No | No | Yes |
 | Async support | Partial | No | Native |
 | WSDL caching | No | No | Yes |
 | Retry & timeout | Manual | Manual | Built-in |
