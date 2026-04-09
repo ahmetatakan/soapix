@@ -36,19 +36,18 @@ class DocsGenerator:
         Returns:
             str if output is 'markdown' or 'html' and path is None, else None.
         """
-        match output:
-            case "terminal":
-                self._render_terminal()
-                return None
-            case "markdown":
-                return self._render_markdown(path)
-            case "html":
-                return self._render_html(path)
-            case _:
-                raise ValueError(
-                    f"Invalid output format: '{output}'. "
-                    f"Supported: 'terminal', 'markdown', 'html'"
-                )
+        if output == "terminal":
+            self._render_terminal()
+            return None
+        elif output == "markdown":
+            return self._render_markdown(path)
+        elif output == "html":
+            return self._render_html(path)
+        else:
+            raise ValueError(
+                f"Invalid output format: '{output}'. "
+                f"Supported: 'terminal', 'markdown', 'html'"
+            )
 
     def _render_terminal(self) -> None:
         from soapix.docs.terminal import render_terminal

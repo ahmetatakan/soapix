@@ -46,7 +46,7 @@ print(result["name"])
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.9+
 - Dependencies: `httpx`, `lxml`, `rich`
 
 ## Installation
@@ -502,7 +502,7 @@ If a 5xx response contains a `soap:Fault` body (common for authentication failur
 | WSDL caching | No | No | Yes |
 | Retry & timeout | Manual | Manual | Built-in |
 | Type stubs | Partial | No | Yes |
-| Python 3.10+ | Yes | No | Yes |
+| Python 3.9+ | Yes | No | Yes |
 
 > **Notes:**
 > - *Zeep meaningful errors:* Zeep raises structured `Fault` exceptions but does not include sent payload, endpoint, or human-readable hints in the error output.

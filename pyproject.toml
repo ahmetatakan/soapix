@@ -4,10 +4,10 @@ build-backend = "hatchling.build"
 
 [project]
 name = "soapix"
-version = "0.4.3"
+version = "0.4.4"
 description = "A tolerant, self-documenting Python SOAP client library"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "Ahmet Atakan", email = "ahmetatakan.tech@gmail.com" }]
 keywords = ["soap", "wsdl", "xml", "webservice", "client"]
@@ -16,6 +16,7 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -46,7 +47,7 @@ testpaths = ["tests"]
 addopts = "--cov=soapix --cov-report=term-missing"
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py39"
 line-length = 88
 
 [tool.ruff.lint]
@@ -57,5 +58,5 @@ packages = ["soapix"]
 include = ["soapix/py.typed", "soapix/**/*.pyi"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.9"
 strict = true

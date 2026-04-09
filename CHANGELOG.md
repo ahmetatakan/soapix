@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 ---
 
+## [0.4.4] — 2026-04-09
+
+### Changed
+
+- **Python 3.9+ support** — minimum required version lowered from 3.10 to 3.9.
+
+---
+
 ## [0.4.3] — 2026-04-09
 
 ### Added
