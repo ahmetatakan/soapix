@@ -53,7 +53,7 @@ def _example_value(
             pairs = ", ".join(
                 f'"{c.name}": {_example_value(c, doc, inner)}'
                 for c in children
-                if c.name != "_any"
+                if c.name not in ("_any", "_anyAttribute")
             )
             raw = "{" + pairs + "}"
             return f"[{raw}]" if param.is_list else raw
@@ -77,12 +77,12 @@ def build_example(
     fields = _get_fields(op, doc)
 
     # Only required params in example for brevity; show one optional as hint
-    required = [p for p in fields if p.required and p.name != "_any"]
-    optional_shown = [p for p in fields if not p.required and p.name != "_any"][:1]
+    required = [p for p in fields if p.required and p.name not in ("_any", "_anyAttribute")]
+    optional_shown = [p for p in fields if not p.required and p.name not in ("_any", "_anyAttribute")][:1]
     all_shown = required + optional_shown
 
     if not all_shown and fields:
-        first = next((p for p in fields if p.name != "_any"), None)
+        first = next((p for p in fields if p.name not in ("_any", "_anyAttribute")), None)
         if first:
             all_shown = [first]
 

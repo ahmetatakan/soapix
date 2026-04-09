@@ -47,7 +47,7 @@ print(result["name"])
 ## Requirements
 
 - Python 3.10+
-- Dependencies: `httpx`, `lxml`, `rich`, `pydantic`
+- Dependencies: `httpx`, `lxml`, `rich`
 
 ## Installation
 
@@ -75,7 +75,7 @@ client = SoapClient(
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `timeout` | `float` | `30.0` | HTTP request timeout in seconds |
-| `retries` | `int` | `0` | Number of retries on connection/timeout errors |
+| `retries` | `int` | `0` | Retry attempts on 5xx server errors and connection/timeout failures (4xx errors are never retried) |
 | `strict` | `bool` | `False` | If `True`, raises on missing required fields instead of sending `xsi:nil` |
 | `debug` | `bool` | `False` | Prints colourised request and response XML to the terminal |
 | `cache` | `Cache \| None` | `MemoryCache` | WSDL parse cache; `None` disables caching |
@@ -482,7 +482,7 @@ client = SoapClient(
 )
 ```
 
-Retries apply to `HttpError` (connection failures) and `TimeoutError`. Server-side SOAP faults (`SoapFaultError`) are not retried.
+Retries apply to 5xx server errors, connection failures (`HttpError`), and timeouts (`TimeoutError`). 4xx client errors and SSL failures are never retried. Server-side SOAP faults (`SoapFaultError`) are not retried.
 
 ---
 

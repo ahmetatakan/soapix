@@ -33,6 +33,16 @@ from soapix.wsdl.types import (
 )
 
 
+def _safe_int(value: str | None, default: int) -> int:
+    """Parse an integer string, returning *default* on empty or invalid input."""
+    if not value or not value.strip():
+        return default
+    try:
+        return int(value.strip())
+    except ValueError:
+        return default
+
+
 class WsdlParser:
     """
     Parses a WSDL document into a WsdlDocument model.
@@ -103,6 +113,8 @@ class WsdlParser:
 
         # Named model groups collected during type parsing (local_name → element)
         self._schema_groups: dict[str, etree._Element] = {}
+        # Named attribute groups (local_name → element)
+        self._attribute_groups: dict[str, etree._Element] = {}
 
         # Parse in dependency order
         self._parse_types(root, doc, resolver)
@@ -124,6 +136,7 @@ class WsdlParser:
                     use=op_data["use"],
                     input_params=op_data["input"],
                     output_params=op_data["output"],
+                    fault_params=op_data.get("faults", {}),
                     documentation=op_data["documentation"],
                 )
 
@@ -205,10 +218,21 @@ class WsdlParser:
                 doc.types[key] = type_info
 
             elif local == "simpleType":
-                base = self._get_restriction_base(child)
-                doc.types[key] = TypeInfo(
-                    name=name, namespace=tns, kind="simple", base_type=base
-                )
+                # Check for xs:list — space-separated list of a primitive type
+                list_el = self._find(child, NS_XSD, "list")
+                if list_el is not None:
+                    item_type = list_el.get("itemType", "string")
+                    if ":" in item_type:
+                        item_type = item_type.split(":", 1)[1]
+                    doc.types[key] = TypeInfo(
+                        name=name, namespace=tns, kind="list",
+                        item_type=item_type, is_array=True,
+                    )
+                else:
+                    base = self._get_restriction_base(child)
+                    doc.types[key] = TypeInfo(
+                        name=name, namespace=tns, kind="simple", base_type=base
+                    )
 
             elif local == "element":
                 type_name = child.get("type", "")
@@ -231,6 +255,12 @@ class WsdlParser:
                 self._schema_groups[name] = child
                 if tns:
                     self._schema_groups[f"{{{tns}}}{name}"] = child
+
+            elif local == "attributeGroup" and name:
+                # Store named attribute group for xs:attributeGroup ref="..." resolution
+                self._attribute_groups[name] = child
+                if tns:
+                    self._attribute_groups[f"{{{tns}}}{name}"] = child
 
     def _parse_complex_type(
         self,
@@ -274,13 +304,22 @@ class WsdlParser:
                         required=False,
                     )
                 )
-            elif local == "extension":
-                # Bug 2: capture base type for inheritance; then descend for own fields
+            elif local in ("extension", "restriction"):
+                # xs:extension — merge base fields + own fields
+                # xs:restriction — still inherit base fields (just constrained further)
                 base = child.get("base", "")
                 if base:
                     if ":" in base:
                         base = base.split(":", 1)[1]
-                    type_info.base_type = base
+                    # Only set base_type if not a primitive XSD type
+                    _XSD_PRIMITIVES = {
+                        "string", "int", "integer", "long", "short", "byte",
+                        "float", "double", "decimal", "boolean", "dateTime",
+                        "date", "time", "anyURI", "base64Binary", "hexBinary",
+                        "normalizedString", "token", "anyType", "anySimpleType",
+                    }
+                    if base not in _XSD_PRIMITIVES:
+                        type_info.base_type = base
                 self._collect_fields(child, type_info, tns, seen, depth + 1)
             elif local == "group":
                 # Bug 3: xs:group ref="..." — resolve named model group
@@ -293,8 +332,31 @@ class WsdlParser:
                         self._collect_fields(group_el, type_info, tns, seen, depth + 1)
                 else:
                     self._collect_fields(child, type_info, tns, seen, depth + 1)
-            elif local in ("sequence", "all", "choice", "complexContent",
-                           "simpleContent", "restriction", "attributeGroup"):
+            elif local == "attribute":
+                param = self._attribute_to_param(child, tns)
+                if param:
+                    type_info.fields.append(param)
+            elif local == "anyAttribute":
+                type_info.fields.append(
+                    ParameterInfo(
+                        name="_anyAttribute",
+                        type_name="string",
+                        namespace=tns,
+                        required=False,
+                    )
+                )
+            elif local == "attributeGroup":
+                ref = child.get("ref", "")
+                if ref:
+                    # xs:attributeGroup ref="..." — resolve named attribute group
+                    ref_local = ref.split(":", 1)[1] if ":" in ref else ref
+                    group_el = self._attribute_groups.get(ref_local)
+                    if group_el is not None:
+                        self._collect_fields(group_el, type_info, tns, seen, depth + 1)
+                else:
+                    # inline attributeGroup definition — descend directly
+                    self._collect_fields(child, type_info, tns, seen, depth + 1)
+            elif local in ("sequence", "all", "choice", "complexContent", "simpleContent"):
                 # Descend into structural/grouping elements
                 self._collect_fields(child, type_info, tns, seen, depth + 1)
 
@@ -313,9 +375,9 @@ class WsdlParser:
                 name = ref
             type_name = name  # resolved by docs layer via doc.types
 
-            min_occurs = int(element.get("minOccurs", "1"))
+            min_occurs = _safe_int(element.get("minOccurs", "1"), 1)
             max_occurs_raw = element.get("maxOccurs", "1")
-            max_occurs = None if max_occurs_raw == "unbounded" else int(max_occurs_raw)
+            max_occurs = None if max_occurs_raw == "unbounded" else _safe_int(max_occurs_raw, 1)
             nillable = element.get("nillable", "false").lower() == "true"
 
             return ParameterInfo(
@@ -327,13 +389,19 @@ class WsdlParser:
                 max_occurs=max_occurs,
             )
 
-        type_name = element.get("type", "anyType")
+        type_name = element.get("type", "")
         if ":" in type_name:
             type_name = type_name.split(":", 1)[1]
 
-        min_occurs = int(element.get("minOccurs", "1"))
+        # Inline complexType: no type="" attribute but has a nested <xs:complexType>
+        # The type was registered in doc.types under the element name during schema parsing
+        if not type_name:
+            inline = self._find(element, NS_XSD, "complexType")
+            type_name = name if inline is not None else "anyType"
+
+        min_occurs = _safe_int(element.get("minOccurs", "1"), 1)
         max_occurs_raw = element.get("maxOccurs", "1")
-        max_occurs = None if max_occurs_raw == "unbounded" else int(max_occurs_raw)
+        max_occurs = None if max_occurs_raw == "unbounded" else _safe_int(max_occurs_raw, 1)
         nillable = element.get("nillable", "false").lower() == "true"
         default = element.get("default")
 
@@ -345,6 +413,35 @@ class WsdlParser:
             min_occurs=min_occurs,
             max_occurs=max_occurs,
             default=default,
+        )
+
+    def _attribute_to_param(
+        self, element: etree._Element, tns: str
+    ) -> ParameterInfo | None:
+        """Convert an xs:attribute declaration to a ParameterInfo."""
+        name = element.get("name", "")
+        if not name:
+            ref = element.get("ref", "")
+            if not ref:
+                return None
+            name = ref.split(":", 1)[1] if ":" in ref else ref
+
+        type_name = element.get("type", "string")
+        if ":" in type_name:
+            type_name = type_name.split(":", 1)[1]
+
+        # xs:attribute use="required|optional|prohibited"
+        use = element.get("use", "optional")
+        required = use == "required"
+        default = element.get("default") or element.get("fixed")
+
+        return ParameterInfo(
+            name=name,
+            type_name=type_name,
+            namespace=tns,
+            required=required,
+            default=default,
+            is_attribute=True,
         )
 
     def _get_restriction_base(self, element: etree._Element) -> str | None:
@@ -421,9 +518,17 @@ class WsdlParser:
                 input_msg = self._resolve_message_ref(input_el, messages) if input_el is not None else []
                 output_msg = self._resolve_message_ref(output_el, messages) if output_el is not None else []
 
+                faults: dict[str, list[ParameterInfo]] = {}
+                for fault_el in self._findall(op, NS_WSDL, "fault"):
+                    fault_name = fault_el.get("name", "")
+                    fault_params = self._resolve_message_ref(fault_el, messages)
+                    if fault_name:
+                        faults[fault_name] = fault_params
+
                 ops[op_name] = {
                     "input": input_msg,
                     "output": output_msg,
+                    "faults": faults,
                     "documentation": documentation,
                 }
 
@@ -491,8 +596,14 @@ class WsdlParser:
                     )
 
                 # Determine use (literal/encoded)
+                # <soap:body> may be a direct child of op_el or nested inside <input>
                 use = ParameterUse.LITERAL
                 body_el = self._find_soap(op_el, soap_ns, "body")
+                if body_el is None:
+                    # Look inside <input> element (the common WSDL pattern)
+                    input_el = self._find(op_el, NS_WSDL, "input")
+                    if input_el is not None:
+                        body_el = self._find_soap(input_el, soap_ns, "body")
                 if body_el is not None:
                     use_str = body_el.get("use", "literal")
                     use = ParameterUse.ENCODED if use_str == "encoded" else ParameterUse.LITERAL
@@ -505,6 +616,7 @@ class WsdlParser:
                     "use": use,
                     "input": abstract.get("input", []),
                     "output": abstract.get("output", []),
+                    "faults": abstract.get("faults", {}),
                     "documentation": abstract.get("documentation", ""),
                 }
 
@@ -571,6 +683,7 @@ class WsdlParser:
                         use=op_data["use"],
                         input_params=op_data["input"],
                         output_params=op_data["output"],
+                        fault_params=op_data.get("faults", {}),
                         documentation=op_data["documentation"],
                     )
 

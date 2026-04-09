@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- xs:list type — space-separated values -->
+<definitions
+    name="TagService"
+    targetNamespace="http://example.com/tags"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/tags"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/tags">
+
+      <!-- xs:list type — should serialize as space-separated string -->
+      <xsd:simpleType name="IntList">
+        <xsd:list itemType="xsd:int"/>
+      </xsd:simpleType>
+
+      <xsd:element name="SetTags">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="ids" type="tns:IntList"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="SetTagsResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="ok" type="xsd:boolean"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+    </xsd:schema>
+  </types>
+
+  <message name="SetTagsRequest">
+    <part name="parameters" element="tns:SetTags"/>
+  </message>
+  <message name="SetTagsResponse">
+    <part name="parameters" element="tns:SetTagsResponse"/>
+  </message>
+
+  <portType name="TagServicePortType">
+    <operation name="SetTags">
+      <input  message="tns:SetTagsRequest"/>
+      <output message="tns:SetTagsResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="TagServiceBinding" type="tns:TagServicePortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="SetTags">
+      <soap:operation soapAction="http://example.com/tags/SetTags"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <service name="TagService">
+    <port name="TagServicePort" binding="tns:TagServiceBinding">
+      <soap:address location="http://example.com/tags"/>
+    </port>
+  </service>
+
+</definitions>

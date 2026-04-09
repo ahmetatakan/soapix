@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns:tns="http://example.com/attrgroup"
+             xmlns:xs="http://www.w3.org/2001/XMLSchema"
+             targetNamespace="http://example.com/attrgroup"
+             name="AttrGroupService">
+
+  <types>
+    <xs:schema targetNamespace="http://example.com/attrgroup">
+
+      <xs:attributeGroup name="CommonAttrs">
+        <xs:attribute name="lang"    type="xs:string" use="optional"/>
+        <xs:attribute name="version" type="xs:string" use="required"/>
+      </xs:attributeGroup>
+
+      <xs:complexType name="RequestType">
+        <xs:sequence>
+          <xs:element name="body" type="xs:string"/>
+        </xs:sequence>
+        <xs:attributeGroup ref="tns:CommonAttrs"/>
+      </xs:complexType>
+
+      <xs:element name="DoRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="request" type="tns:RequestType"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="DoResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="result" type="xs:string"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+    </xs:schema>
+  </types>
+
+  <message name="DoInput">  <part name="parameters" element="tns:DoRequest"/></message>
+  <message name="DoOutput"> <part name="parameters" element="tns:DoResponse"/></message>
+
+  <portType name="AttrGroupPort">
+    <operation name="Do">
+      <input  message="tns:DoInput"/>
+      <output message="tns:DoOutput"/>
+    </operation>
+  </portType>
+
+  <binding name="AttrGroupBinding" type="tns:AttrGroupPort">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="Do">
+      <soap:operation soapAction="Do"/>
+      <input><soap:body use="literal"/></input>
+      <output><soap:body use="literal"/></output>
+    </operation>
+  </binding>
+
+  <service name="AttrGroupService">
+    <port name="AttrGroupPort" binding="tns:AttrGroupBinding">
+      <soap:address location="http://example.com/attrgroup"/>
+    </port>
+  </service>
+
+</definitions>

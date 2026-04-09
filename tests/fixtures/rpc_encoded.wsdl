@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- RPC/encoded style WSDL for testing xsi:type annotations -->
+<definitions
+    name="CalcService"
+    targetNamespace="http://example.com/calc"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/calc"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/">
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/calc">
+      <xsd:element name="AddRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="a" type="xsd:int"/>
+            <xsd:element name="b" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="AddResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="result" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+    </xsd:schema>
+  </types>
+
+  <message name="AddRequest">
+    <part name="a" type="xsd:int"/>
+    <part name="b" type="xsd:int"/>
+  </message>
+  <message name="AddResponse">
+    <part name="result" type="xsd:int"/>
+  </message>
+
+  <portType name="CalcPortType">
+    <operation name="Add">
+      <input  message="tns:AddRequest"/>
+      <output message="tns:AddResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="CalcBinding" type="tns:CalcPortType">
+    <soap:binding style="rpc" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="Add">
+      <soap:operation soapAction="http://example.com/calc/Add"/>
+      <input>  <soap:body use="encoded" namespace="http://example.com/calc" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/> </input>
+      <output> <soap:body use="encoded" namespace="http://example.com/calc" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/> </output>
+    </operation>
+  </binding>
+
+  <service name="CalcService">
+    <port name="CalcPort" binding="tns:CalcBinding">
+      <soap:address location="http://example.com/calc"/>
+    </port>
+  </service>
+
+</definitions>

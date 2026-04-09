@@ -109,11 +109,19 @@ class Transport:
                 if self.debug:
                     _log_response(response.status_code, elapsed, response.content)
 
-                if response.status_code >= 400 and response.status_code != 500:
+                if 400 <= response.status_code < 500:
+                    # 4xx — client error, do not retry
                     raise HttpError(
                         f"HTTP {response.status_code} error",
                         hint=f"Endpoint: {endpoint}",
                     )
+                if response.status_code >= 500:
+                    # 5xx — server error, retry
+                    last_error = HttpError(
+                        f"HTTP {response.status_code} error",
+                        hint=f"Endpoint: {endpoint} — server error, retrying.",
+                    )
+                    continue
 
                 return response.content
 
@@ -126,7 +134,7 @@ class Transport:
                 if _is_ssl_error(e):
                     from urllib.parse import urlparse
                     host = urlparse(endpoint).netloc or endpoint
-                    last_error = HttpError(
+                    raise HttpError(
                         f"SSL verification failed for {endpoint}",
                         hint=(
                             f"The server's certificate could not be verified.\n\n"
@@ -197,11 +205,19 @@ class AsyncTransport:
                 if self.debug:
                     _log_response(response.status_code, elapsed, response.content)
 
-                if response.status_code >= 400 and response.status_code != 500:
+                if 400 <= response.status_code < 500:
+                    # 4xx — client error, do not retry
                     raise HttpError(
                         f"HTTP {response.status_code} error",
                         hint=f"Endpoint: {endpoint}",
                     )
+                if response.status_code >= 500:
+                    # 5xx — server error, retry
+                    last_error = HttpError(
+                        f"HTTP {response.status_code} error",
+                        hint=f"Endpoint: {endpoint} — server error, retrying.",
+                    )
+                    continue
 
                 return response.content
 
@@ -214,7 +230,7 @@ class AsyncTransport:
                 if _is_ssl_error(e):
                     from urllib.parse import urlparse
                     host = urlparse(endpoint).netloc or endpoint
-                    last_error = HttpError(
+                    raise HttpError(
                         f"SSL verification failed for {endpoint}",
                         hint=(
                             f"The server's certificate could not be verified.\n\n"

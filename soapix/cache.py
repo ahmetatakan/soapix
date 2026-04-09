@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import pickle
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -29,29 +30,40 @@ class MemoryCache:
         self._ttl = ttl
         self._maxsize = maxsize
         self._store: dict[str, tuple[Any, float]] = {}  # key → (value, timestamp)
+        self._lock = threading.Lock()
 
     def get(self, key: str) -> Any | None:
-        entry = self._store.get(key)
-        if entry is None:
-            return None
-        value, ts = entry
-        if self._ttl is not None and (time.monotonic() - ts) > self._ttl:
-            del self._store[key]
-            return None
-        return value
+        with self._lock:
+            entry = self._store.get(key)
+            if entry is None:
+                return None
+            value, ts = entry
+            if self._ttl is not None and (time.monotonic() - ts) > self._ttl:
+                del self._store[key]
+                return None
+            return value
 
     def set(self, key: str, value: Any) -> None:
-        # Evict oldest entry if at capacity
-        if len(self._store) >= self._maxsize and key not in self._store:
-            oldest = min(self._store, key=lambda k: self._store[k][1])
-            del self._store[oldest]
-        self._store[key] = (value, time.monotonic())
+        with self._lock:
+            # Purge expired entries first to reclaim space
+            if self._ttl is not None:
+                now = time.monotonic()
+                expired = [k for k, (_, ts) in self._store.items() if (now - ts) > self._ttl]
+                for k in expired:
+                    del self._store[k]
+            # Evict oldest entry if still at capacity
+            if len(self._store) >= self._maxsize and key not in self._store:
+                oldest = min(self._store, key=lambda k: self._store[k][1])
+                del self._store[oldest]
+            self._store[key] = (value, time.monotonic())
 
     def clear(self) -> None:
-        self._store.clear()
+        with self._lock:
+            self._store.clear()
 
     def __len__(self) -> int:
-        return len(self._store)
+        with self._lock:
+            return len(self._store)
 
 
 class FileCache:
@@ -77,6 +89,11 @@ class FileCache:
     def get(self, key: str) -> Any | None:
         p = self._path(key)
         if not p.exists():
+            return None
+        # Ensure the resolved path stays within our cache directory
+        try:
+            p.resolve().relative_to(self._dir.resolve())
+        except ValueError:
             return None
         if self._ttl is not None:
             age = time.time() - p.stat().st_mtime

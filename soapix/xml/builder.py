@@ -137,9 +137,29 @@ class SoapBuilder:
         tns: str,
         soap_env_ns: str,
     ) -> None:
-        """Build RPC/literal body."""
+        """Build RPC/literal or RPC/encoded body."""
+        from soapix.wsdl.types import ParameterUse
+        from soapix.wsdl.namespace import NS_XSD
+
         op_el = etree.SubElement(body, f"{{{tns}}}{operation.name}")
-        self._serialize_params(op_el, operation.input_params, params, tns)
+
+        if operation.use == ParameterUse.ENCODED:
+            # RPC/encoded: each param needs xsi:type annotation
+            NS_XSI_LOCAL = "http://www.w3.org/2001/XMLSchema-instance"
+            for param in operation.input_params:
+                value = params.get(param.name, param.default)
+                child = etree.SubElement(op_el, param.name)
+                child.set(f"{{{NS_XSI_LOCAL}}}type", f"xsd:{param.type_name}")
+                if value is None:
+                    child.set(f"{{{NS_XSI_LOCAL}}}nil", "true")
+                elif isinstance(value, bool):
+                    child.text = "true" if value else "false"
+                elif hasattr(value, "isoformat"):
+                    child.text = value.isoformat()
+                else:
+                    child.text = str(value)
+        else:
+            self._serialize_params(op_el, operation.input_params, params, tns)
 
     # ------------------------------------------------------------------
     # Serialization
@@ -169,6 +189,14 @@ class SoapBuilder:
                     got=None,
                 )
 
+            # xs:attribute → write as XML attribute on parent, not a child element
+            if getattr(param, "is_attribute", False):
+                if value is not None:
+                    parent.set(param.name, str(value))
+                elif param.default is not None:
+                    parent.set(param.name, str(param.default))
+                continue
+
             # Optional None → empty element <field/> (standard SOAP behavior)
             # Required None → xsi:nil (handled inside _serialize_value)
             if value is None and not param.required:
@@ -192,6 +220,19 @@ class SoapBuilder:
             return
 
         if isinstance(value, list):
+            # Check if type is xs:list (space-separated) vs repeating elements
+            key = f"{{{tns}}}{type_name}" if tns else type_name
+            type_info = self._doc.types.get(key)
+            if type_info is None:
+                for t in self._doc.types.values():
+                    if t.name == type_name:
+                        type_info = t
+                        break
+            if type_info is not None and type_info.kind == "list":
+                el = etree.SubElement(parent, name)
+                el.text = " ".join(str(v) for v in value)
+                return
+            # Repeating elements
             for item in value:
                 self._serialize_value(parent, name, item, type_name, tns)
             return

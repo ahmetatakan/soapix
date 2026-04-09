@@ -265,3 +265,100 @@ class TestGibEFatura:
     def test_endpoint_present(self, parser):
         doc = parser.load(str(FIXTURES / "gib_efatura.wsdl"))
         assert "efatura.example.com" in doc.endpoint
+
+
+class TestXsAttribute:
+    """xs:attribute fields must be included alongside xs:element fields."""
+
+    def test_operation_found(self, parser):
+        doc = parser.load(str(FIXTURES / "xs_attribute.wsdl"))
+        assert "Login" in doc.operations
+
+    def test_credentials_field_present(self, parser):
+        from soapix.docs.resolver import resolve_input_fields
+        doc = parser.load(str(FIXTURES / "xs_attribute.wsdl"))
+        op = doc.get_operation("Login")
+        fields = resolve_input_fields(op, doc)
+        assert any(f.name == "credentials" for f in fields)
+
+    def test_attribute_fields_in_type(self, parser):
+        from soapix.docs.resolver import get_type_fields
+        doc = parser.load(str(FIXTURES / "xs_attribute.wsdl"))
+        fields = get_type_fields("Credentials", doc)
+        field_names = [f.name for f in fields]
+        assert "realm" in field_names    # xs:element
+        assert "token" in field_names    # xs:attribute required
+        assert "locale" in field_names   # xs:attribute optional
+
+    def test_required_attribute(self, parser):
+        from soapix.docs.resolver import get_type_fields
+        doc = parser.load(str(FIXTURES / "xs_attribute.wsdl"))
+        fields = get_type_fields("Credentials", doc)
+        token = next(f for f in fields if f.name == "token")
+        assert token.required is True
+
+    def test_optional_attribute(self, parser):
+        from soapix.docs.resolver import get_type_fields
+        doc = parser.load(str(FIXTURES / "xs_attribute.wsdl"))
+        fields = get_type_fields("Credentials", doc)
+        locale = next(f for f in fields if f.name == "locale")
+        assert locale.required is False
+
+
+class TestAttributeGroup:
+    """xs:attributeGroup ref must expand to its attribute fields."""
+
+    def test_operation_found(self, parser):
+        doc = parser.load(str(FIXTURES / "attribute_group.wsdl"))
+        assert "Do" in doc.operations
+
+    def test_attribute_group_fields_in_type(self, parser):
+        from soapix.docs.resolver import get_type_fields
+        doc = parser.load(str(FIXTURES / "attribute_group.wsdl"))
+        fields = get_type_fields("RequestType", doc)
+        field_names = [f.name for f in fields]
+        assert "body" in field_names      # xs:element
+        assert "lang" in field_names      # from attributeGroup
+        assert "version" in field_names   # from attributeGroup
+
+    def test_required_from_attribute_group(self, parser):
+        from soapix.docs.resolver import get_type_fields
+        doc = parser.load(str(FIXTURES / "attribute_group.wsdl"))
+        fields = get_type_fields("RequestType", doc)
+        version = next(f for f in fields if f.name == "version")
+        assert version.required is True
+
+
+class TestRestrictionBase:
+    """xs:restriction must still expose base type fields."""
+
+    def test_operation_found(self, parser):
+        doc = parser.load(str(FIXTURES / "restriction_base.wsdl"))
+        assert "Get" in doc.operations
+
+    def test_restriction_fields_present(self, parser):
+        from soapix.docs.resolver import get_type_fields
+        doc = parser.load(str(FIXTURES / "restriction_base.wsdl"))
+        fields = get_type_fields("LimitedEntity", doc)
+        field_names = [f.name for f in fields]
+        assert "id" in field_names
+        assert "name" in field_names
+
+
+class TestFaultMessage:
+    """wsdl:fault messages must be parsed and stored in fault_params."""
+
+    def test_operation_found(self, parser):
+        doc = parser.load(str(FIXTURES / "fault_message.wsdl"))
+        assert "GetUser" in doc.operations
+
+    def test_fault_name_present(self, parser):
+        doc = parser.load(str(FIXTURES / "fault_message.wsdl"))
+        op = doc.get_operation("GetUser")
+        assert "ServiceError" in op.fault_params
+
+    def test_fault_params_resolved(self, parser):
+        doc = parser.load(str(FIXTURES / "fault_message.wsdl"))
+        op = doc.get_operation("GetUser")
+        fault = op.fault_params["ServiceError"]
+        assert len(fault) > 0

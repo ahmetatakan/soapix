@@ -29,7 +29,11 @@ def _build_field(
     if type_name not in visited:
         child_params = get_type_fields(type_name, doc)
         inner = visited | {type_name}
-        children = [_build_field(c, doc, inner) for c in child_params]
+        children = [
+            _build_field(c, doc, inner)
+            for c in child_params
+            if c.name not in ("_any", "_anyAttribute")
+        ]
 
     return {
         "name": f.name,
@@ -112,7 +116,11 @@ class _Handler(BaseHTTPRequestHandler):
             fields = resolve_input_fields(op, doc)
             result.append({
                 "name": name,
-                "fields": [_build_field(f, doc) for f in fields],
+                "fields": [
+                    _build_field(f, doc)
+                    for f in fields
+                    if f.name not in ("_any", "_anyAttribute")
+                ],
             })
         self._json(result)
 

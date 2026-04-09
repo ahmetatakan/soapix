@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns:tns="http://example.com/attr"
+             xmlns:xs="http://www.w3.org/2001/XMLSchema"
+             targetNamespace="http://example.com/attr"
+             name="AttributeService">
+
+  <types>
+    <xs:schema targetNamespace="http://example.com/attr">
+
+      <!-- Complex type with xs:attribute fields (SAP / WCF style) -->
+      <xs:complexType name="Credentials">
+        <xs:sequence>
+          <xs:element name="realm" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+        <xs:attribute name="token"  type="xs:string" use="required"/>
+        <xs:attribute name="locale" type="xs:string" use="optional" default="en"/>
+      </xs:complexType>
+
+      <!-- Wrapper element -->
+      <xs:element name="LoginRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="credentials" type="tns:Credentials"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="LoginResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="sessionId" type="xs:string"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+    </xs:schema>
+  </types>
+
+  <message name="LoginInput">
+    <part name="parameters" element="tns:LoginRequest"/>
+  </message>
+  <message name="LoginOutput">
+    <part name="parameters" element="tns:LoginResponse"/>
+  </message>
+
+  <portType name="AttributePortType">
+    <operation name="Login">
+      <input  message="tns:LoginInput"/>
+      <output message="tns:LoginOutput"/>
+    </operation>
+  </portType>
+
+  <binding name="AttributeBinding" type="tns:AttributePortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="Login">
+      <soap:operation soapAction="Login"/>
+      <input><soap:body use="literal"/></input>
+      <output><soap:body use="literal"/></output>
+    </operation>
+  </binding>
+
+  <service name="AttributeService">
+    <port name="AttributePort" binding="tns:AttributeBinding">
+      <soap:address location="http://example.com/attr"/>
+    </port>
+  </service>
+
+</definitions>

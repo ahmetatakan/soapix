@@ -1,5 +1,5 @@
 """
-WSDL type system — pydantic models representing parsed WSDL/XSD structures.
+WSDL type system — dataclass models representing parsed WSDL/XSD structures.
 """
 
 from __future__ import annotations
@@ -51,6 +51,7 @@ class ParameterInfo:
     max_occurs: int | None = 1     # None = unbounded
     default: Any = None
     documentation: str = ""
+    is_attribute: bool = False     # True for xs:attribute declarations
 
     @property
     def is_optional(self) -> bool:
@@ -72,6 +73,7 @@ class OperationInfo:
     use: ParameterUse = ParameterUse.LITERAL
     input_params: list[ParameterInfo] = field(default_factory=list)
     output_params: list[ParameterInfo] = field(default_factory=list)
+    fault_params: dict[str, list[ParameterInfo]] = field(default_factory=dict)
     documentation: str = ""
     # For document/wrapped: the wrapper element name
     input_wrapper: str | None = None

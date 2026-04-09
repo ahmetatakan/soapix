@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns:tns="http://example.com/restriction"
+             xmlns:xs="http://www.w3.org/2001/XMLSchema"
+             targetNamespace="http://example.com/restriction"
+             name="RestrictionService">
+
+  <types>
+    <xs:schema targetNamespace="http://example.com/restriction">
+
+      <xs:complexType name="BaseEntity">
+        <xs:sequence>
+          <xs:element name="id"   type="xs:long"/>
+          <xs:element name="name" type="xs:string"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <!-- xs:restriction — inherits base fields, constrains them -->
+      <xs:complexType name="LimitedEntity">
+        <xs:complexContent>
+          <xs:restriction base="tns:BaseEntity">
+            <xs:sequence>
+              <xs:element name="id"   type="xs:long"/>
+              <xs:element name="name" type="xs:string" maxOccurs="1"/>
+            </xs:sequence>
+          </xs:restriction>
+        </xs:complexContent>
+      </xs:complexType>
+
+      <xs:element name="GetRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="entity" type="tns:LimitedEntity"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="GetResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="result" type="xs:string"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+    </xs:schema>
+  </types>
+
+  <message name="GetInput">  <part name="parameters" element="tns:GetRequest"/></message>
+  <message name="GetOutput"> <part name="parameters" element="tns:GetResponse"/></message>
+
+  <portType name="RestrictionPort">
+    <operation name="Get">
+      <input  message="tns:GetInput"/>
+      <output message="tns:GetOutput"/>
+    </operation>
+  </portType>
+
+  <binding name="RestrictionBinding" type="tns:RestrictionPort">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="Get">
+      <soap:operation soapAction="Get"/>
+      <input><soap:body use="literal"/></input>
+      <output><soap:body use="literal"/></output>
+    </operation>
+  </binding>
+
+  <service name="RestrictionService">
+    <port name="RestrictionPort" binding="tns:RestrictionBinding">
+      <soap:address location="http://example.com/restriction"/>
+    </port>
+  </service>
+
+</definitions>

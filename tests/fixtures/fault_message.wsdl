@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns:tns="http://example.com/fault"
+             xmlns:xs="http://www.w3.org/2001/XMLSchema"
+             targetNamespace="http://example.com/fault"
+             name="FaultService">
+
+  <types>
+    <xs:schema targetNamespace="http://example.com/fault">
+
+      <xs:complexType name="ServiceFault">
+        <xs:sequence>
+          <xs:element name="code"    type="xs:string"/>
+          <xs:element name="message" type="xs:string"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:element name="GetUserRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="userId" type="xs:long"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="GetUserResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="name" type="xs:string"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+    </xs:schema>
+  </types>
+
+  <message name="GetUserInput">   <part name="parameters" element="tns:GetUserRequest"/></message>
+  <message name="GetUserOutput">  <part name="parameters" element="tns:GetUserResponse"/></message>
+  <message name="ServiceFaultMsg"><part name="fault"      type="tns:ServiceFault"/></message>
+
+  <portType name="FaultPort">
+    <operation name="GetUser">
+      <input   message="tns:GetUserInput"/>
+      <output  message="tns:GetUserOutput"/>
+      <fault   name="ServiceError" message="tns:ServiceFaultMsg"/>
+    </operation>
+  </portType>
+
+  <binding name="FaultBinding" type="tns:FaultPort">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="GetUser">
+      <soap:operation soapAction="GetUser"/>
+      <input><soap:body use="literal"/></input>
+      <output><soap:body use="literal"/></output>
+      <fault name="ServiceError"><soap:fault name="ServiceError" use="literal"/></fault>
+    </operation>
+  </binding>
+
+  <service name="FaultService">
+    <port name="FaultPort" binding="tns:FaultBinding">
+      <soap:address location="http://example.com/fault"/>
+    </port>
+  </service>
+
+</definitions>

@@ -100,6 +100,8 @@ def _render_operation(c: Console, op: OperationInfo, doc: WsdlDocument) -> None:
         tbl.add_column()
 
         for param in input_fields:
+            if param.name == "_anyAttribute":
+                continue
             if param.name == "_any":
                 tbl.add_row("*", "any", "[dim]optional — any value[/dim]")
             else:

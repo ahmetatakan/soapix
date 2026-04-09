@@ -7,6 +7,7 @@ from __future__ import annotations
 import ssl
 import urllib.request
 from pathlib import Path
+from typing import Any
 from urllib.parse import urljoin, urlparse
 
 from lxml import etree
@@ -45,14 +46,15 @@ def load_xml(
         if _is_url(location):
             ctx = _make_ssl_context(verify)
             https_handler = urllib.request.HTTPSHandler(context=ctx) if ctx else urllib.request.HTTPSHandler()
+            # Allow HTTPS→HTTP redirects that urllib blocks by default
+            http_handler = urllib.request.HTTPHandler()
+            handlers: list[Any] = [http_handler, https_handler]
             if auth:
                 username, password = auth
                 password_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
                 password_mgr.add_password(None, location, username, password)
-                auth_handler = urllib.request.HTTPBasicAuthHandler(password_mgr)
-                opener = urllib.request.build_opener(auth_handler, https_handler)
-            else:
-                opener = urllib.request.build_opener(https_handler)
+                handlers.append(urllib.request.HTTPBasicAuthHandler(password_mgr))
+            opener = urllib.request.build_opener(*handlers)
             with opener.open(location, timeout=30) as resp:  # noqa: S310
                 content = resp.read()
         else:

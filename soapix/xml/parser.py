@@ -12,6 +12,7 @@ from soapix.exceptions import SoapFaultError
 from soapix.wsdl.namespace import (
     NS_SOAP_ENV_11,
     NS_SOAP_ENV_12,
+    NS_XSI,
     localname,
     namespace_of,
     namespaces_match,
@@ -73,6 +74,8 @@ class SoapResponseParser:
     def _find_body(self, root: etree._Element) -> etree._Element | None:
         """Find soap:Body, tolerant of SOAP 1.1 vs 1.2 namespace differences."""
         for child in root:
+            if callable(child.tag):
+                continue
             local = localname(child.tag)
             ns = namespace_of(child.tag)
             if local == "Body" and (
@@ -84,6 +87,8 @@ class SoapResponseParser:
 
     def _find_fault(self, body: etree._Element) -> etree._Element | None:
         for child in body:
+            if callable(child.tag):
+                continue
             if localname(child.tag) == "Fault":
                 return child
         return None
@@ -140,7 +145,7 @@ class SoapResponseParser:
         - document/literal bare: multiple top-level elements
         - Single-child auto-unwrap
         """
-        children = list(body)
+        children = [c for c in body if not callable(c.tag)]
         if not children:
             return {}
 
@@ -166,20 +171,43 @@ class SoapResponseParser:
         - xsi:nil="true" → return None
         """
         # Check for xsi:nil
-        nil = element.get(f"{{{NS_SOAP_ENV_11}}}nil") or element.get("{http://www.w3.org/2001/XMLSchema-instance}nil", "")
+        nil = element.get(f"{{{NS_XSI}}}nil", "")
         if nil.lower() == "true":
             return None
 
         children = list(element)
 
+        # Collect XML attributes (skip xsi:nil which is already handled)
+        attrs: dict[str, Any] = {}
+        for attr_name, attr_value in element.attrib.items():
+            local = localname(attr_name)
+            if local == "nil":
+                continue
+            attrs[local] = self._cast_value(attr_value)
+
         # Leaf node
         if not children:
             text = (element.text or "").strip()
-            return self._cast_value(text)
+            scalar = self._cast_value(text)
+            if attrs:
+                # Return dict merging attributes and text value
+                result = dict(attrs)
+                if text:
+                    result["_value"] = scalar
+                return result
+            return scalar
 
         # Node with children → dict
-        result: dict[str, Any] = {}
+        result = dict(attrs)
+
+        # Capture leading text in mixed content (e.g. "Hello " in "Hello <b>world</b>")
+        leading_text = (element.text or "").strip()
+        if leading_text:
+            result["_text"] = leading_text
+
         for child in children:
+            if callable(child.tag):
+                continue
             key = localname(child.tag)
             value = self._element_to_dict(child)
 
@@ -193,8 +221,8 @@ class SoapResponseParser:
             else:
                 result[key] = value
 
-        # Auto-unwrap single-key wrapper dicts
-        if len(result) == 1:
+        # Auto-unwrap single-key wrapper dicts (only when no attributes)
+        if not attrs and len(result) == 1:
             only_value = next(iter(result.values()))
             # Only unwrap if it's a dict (not a primitive)
             if isinstance(only_value, dict):
@@ -213,16 +241,20 @@ class SoapResponseParser:
         if text.lower() == "false":
             return False
 
-        # Integer
-        try:
-            return int(text)
-        except ValueError:
-            pass
+        # Integer — only if no leading zeros (preserves "007", "01234", postal codes)
+        if text.lstrip("-").isdigit() and not (len(text.lstrip("-")) > 1 and text.lstrip("-")[0] == "0"):
+            try:
+                return int(text)
+            except ValueError:
+                pass
 
-        # Float
-        try:
-            return float(text)
-        except ValueError:
-            pass
+        # Float — only if no leading zeros before decimal point
+        if "." in text:
+            int_part = text.lstrip("-").split(".")[0]
+            if not (len(int_part) > 1 and int_part[0] == "0"):
+                try:
+                    return float(text)
+                except ValueError:
+                    pass
 
         return text
