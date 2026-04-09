@@ -482,7 +482,9 @@ client = SoapClient(
 )
 ```
 
-Retries apply to 5xx server errors, connection failures (`HttpError`), and timeouts (`TimeoutError`). 4xx client errors and SSL failures are never retried. Server-side SOAP faults (`SoapFaultError`) are not retried.
+Retries apply to transient 5xx server errors (no SOAP body), connection failures (`HttpError`), and timeouts (`TimeoutError`). 4xx client errors and SSL failures are never retried.
+
+If a 5xx response contains a `soap:Fault` body (common for authentication failures, invalid input, etc.), it is treated as a definitive fault — `SoapFaultError` is raised immediately without retrying.
 
 ---
 

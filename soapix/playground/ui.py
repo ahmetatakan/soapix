@@ -58,10 +58,21 @@ input[type=text]:focus,textarea:focus{border-color:#7c3aed}
 .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.02em}
 .badge-ok{background:#064e3b;color:#34d399}
 .badge-err{background:#450a0a;color:#f87171}
-.resp-box{background:#080b12;border:1px solid #1e2130;border-radius:8px;padding:16px;font-family:'SF Mono','Fira Code','Consolas',monospace;font-size:12px;line-height:1.7;overflow:auto;min-height:180px;max-height:60vh;white-space:pre;word-break:break-all;color:#94a3b8}
-.resp-ok{color:#6ee7b7}
-.resp-err{color:#fca5a5}
+.resp-box{background:#080b12;border:1px solid #1e2130;border-radius:8px;padding:16px;font-family:'SF Mono','Fira Code','Consolas',monospace;font-size:12px;line-height:1.7;overflow:auto;min-height:180px;max-height:60vh;white-space:pre;word-break:break-word;color:#94a3b8}
 .resp-time{font-size:11px;color:#475569}
+.copy-btn{margin-left:auto;background:transparent;border:1px solid #2d3148;color:#64748b;border-radius:5px;padding:3px 10px;font-size:11px;cursor:pointer;transition:all 0.15s}
+.copy-btn:hover{border-color:#475569;color:#94a3b8}
+.copy-btn.copied{border-color:#34d399;color:#34d399}
+/* JSON syntax highlighting */
+.n-key{color:#a78bfa}
+.n-str{color:#6ee7b7}
+.n-num{color:#fbbf24}
+.n-bool{color:#60a5fa}
+.n-null{color:#475569;font-style:italic}
+/* error display */
+.err-block{color:#fca5a5}
+.err-type{color:#f87171;font-weight:700}
+.err-hint{color:#fb923c;margin-top:6px;border-top:1px solid #2d3148;padding-top:6px}
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;color:#374151;text-align:center;gap:10px;flex:1}
 .empty-icon{font-size:44px;opacity:0.4}
 .no-fields{color:#475569;font-size:13px;font-style:italic;margin-bottom:12px}
@@ -191,7 +202,7 @@ function renderForm(op) {
       </div>
     </div>
     <div class="resp-panel">
-      <div class="resp-hd">Response <span id="resp-badge"></span> <span class="resp-time" id="resp-time"></span></div>
+      <div class="resp-hd">Response <span id="resp-badge"></span> <span class="resp-time" id="resp-time"></span><button class="copy-btn" id="copy-btn" onclick="copyResp()" style="display:none">Copy</button></div>
       <div class="resp-box" id="resp-box"><span style="color:#1e293b">Response will appear here…</span></div>
     </div>`;
 }
@@ -237,10 +248,12 @@ async function execute() {
     document.getElementById('resp-time').textContent = ms + ' ms';
     if (data.ok) {
       badge.innerHTML = '<span class="badge badge-ok">200 OK</span>';
-      box.innerHTML = '<span class="resp-ok">' + esc(JSON.stringify(data.result, null, 2)) + '</span>';
+      box.innerHTML = syntaxHighlight(data.result);
+      document.getElementById('copy-btn').style.display = '';
     } else {
       badge.innerHTML = '<span class="badge badge-err">Error</span>';
-      box.innerHTML = '<span class="resp-err">' + esc(data.error) + '</span>';
+      box.innerHTML = renderError(data.error);
+      document.getElementById('copy-btn').style.display = 'none';
     }
   } catch (e) {
     document.getElementById('resp-box').innerHTML = '<span class="resp-err">Network error: ' + esc(e.message) + '</span>';
@@ -254,10 +267,60 @@ function clearForm() {
   document.getElementById('resp-box').innerHTML = '<span style="color:#1e293b">Response will appear here…</span>';
   document.getElementById('resp-badge').innerHTML = '';
   document.getElementById('resp-time').textContent = '';
+  const cb = document.getElementById('copy-btn');
+  if (cb) cb.style.display = 'none';
 }
 
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ---- Syntax-highlighted JSON ---- */
+function syntaxHighlight(obj) {
+  const raw = JSON.stringify(obj, null, 2);
+  return raw.split('\\n').map(line => {
+    const e = line.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    // "key": value  pattern
+    const km = e.match(/^(\\s*)("(?:[^"]*)")(:\\s*)(.*)/);
+    if (km) {
+      return km[1] + '<span class="n-key">' + km[2] + '</span>' + km[3] + colorVal(km[4]);
+    }
+    return colorVal(e);
+  }).join('\\n');
+}
+
+function colorVal(s) {
+  const core = s.replace(/,\\s*$/, '').trim();
+  if (core.charAt(0) === '"') return '<span class="n-str">' + s + '</span>';
+  if (core === 'true' || core === 'false') return '<span class="n-bool">' + s + '</span>';
+  if (core === 'null') return '<span class="n-null">' + s + '</span>';
+  if (core.length > 0 && (core.charAt(0) === '-' || (core.charAt(0) >= '0' && core.charAt(0) <= '9')))
+    return '<span class="n-num">' + s + '</span>';
+  return s;
+}
+
+/* ---- Error display ---- */
+function renderError(msg) {
+  const idx = msg.indexOf('Hint:');
+  if (idx > 0) {
+    const main = msg.slice(0, idx).trim();
+    const hint = msg.slice(idx + 5).trim();
+    return '<span class="err-block"><span class="err-type">' + esc(main) + '</span>'
+      + '<div class="err-hint">Hint: ' + esc(hint) + '</div></span>';
+  }
+  return '<span class="err-block">' + esc(msg) + '</span>';
+}
+
+/* ---- Copy response to clipboard ---- */
+function copyResp() {
+  const box = document.getElementById('resp-box');
+  const text = box.innerText || box.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+  });
 }
 
 document.addEventListener('keydown', e => {

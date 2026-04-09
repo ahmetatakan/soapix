@@ -4,6 +4,26 @@ All notable changes to this project are documented here.
 
 ---
 
+## [0.4.3] — 2026-04-09
+
+### Added
+
+- **Interactive playground response formatting** — JSON responses are now syntax-
+  highlighted (keys, strings, numbers, booleans, null each in distinct colours).
+  A **Copy** button appears on successful responses. Error messages with a `Hint:`
+  section are rendered in two parts for readability.
+
+### Fixed
+
+- **500 + SOAP Fault now raises `SoapFaultError`** — SOAP services return HTTP 500
+  when a business-level fault occurs (wrong credentials, invalid input, etc.).
+  Previously soapix raised a generic `HttpError: HTTP 500 error`. Now the response
+  body is inspected: if it contains a `soap:Fault`, the body is returned to the
+  parser which raises a structured `SoapFaultError` with `fault_code` and
+  `fault_string`. Genuine transient 500s (no SOAP body) still retry as before.
+
+---
+
 ## [0.4.2] — 2026-04-09
 
 ### Fixed

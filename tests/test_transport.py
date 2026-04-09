@@ -88,6 +88,17 @@ class TestTransportRetry:
         assert result == b"<ok/>"
         assert mock_post.call_count == 2
 
+    def test_5xx_with_soap_fault_returns_body_immediately(self):
+        """5xx carrying a soap:Fault body must be returned without retrying."""
+        fault_body = b"<soap:Envelope><soap:Body><soap:Fault><faultcode>Server</faultcode></soap:Fault></soap:Body></soap:Envelope>"
+        t = Transport(retries=3)
+        with patch("httpx.Client") as MockClient:
+            mock_post = MockClient.return_value.__enter__.return_value.post
+            mock_post.return_value = _make_response(500, fault_body)
+            result = t.send("http://example.com", "Action", b"<req/>")
+        assert result == fault_body
+        assert mock_post.call_count == 1  # no retry
+
     def test_timeout_raises_timeout_error(self):
         t = Transport(timeout=5.0, retries=0)
         with patch("httpx.Client") as MockClient:

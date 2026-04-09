@@ -116,7 +116,11 @@ class Transport:
                         hint=f"Endpoint: {endpoint}",
                     )
                 if response.status_code >= 500:
-                    # 5xx — server error, retry
+                    # SOAP services return 500 + soap:Fault for business errors.
+                    # Return the body so SoapResponseParser can raise SoapFaultError.
+                    if b"Fault" in response.content:
+                        return response.content
+                    # Genuine transient 5xx (no SOAP body) — retry
                     last_error = HttpError(
                         f"HTTP {response.status_code} error",
                         hint=f"Endpoint: {endpoint} — server error, retrying.",
@@ -212,7 +216,11 @@ class AsyncTransport:
                         hint=f"Endpoint: {endpoint}",
                     )
                 if response.status_code >= 500:
-                    # 5xx — server error, retry
+                    # SOAP services return 500 + soap:Fault for business errors.
+                    # Return the body so SoapResponseParser can raise SoapFaultError.
+                    if b"Fault" in response.content:
+                        return response.content
+                    # Genuine transient 5xx (no SOAP body) — retry
                     last_error = HttpError(
                         f"HTTP {response.status_code} error",
                         hint=f"Endpoint: {endpoint} — server error, retrying.",
