@@ -48,6 +48,16 @@ def _resolve_params(
     return params
 
 
+def get_type_fields(type_name: str, doc: WsdlDocument) -> list[ParameterInfo]:
+    """
+    Return the child fields of *type_name* if it is a complex type, else [].
+
+    Use this to expand a parameter like ``auth (Authentication)`` into its
+    actual fields ``appKey``, ``appSecret``, etc.
+    """
+    return _expand_type(type_name, doc)
+
+
 def _expand_type(
     type_name: str,
     doc: WsdlDocument,

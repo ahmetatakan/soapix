@@ -12,6 +12,20 @@ import httpx
 from soapix.exceptions import HttpError, TimeoutError
 
 
+def _is_ssl_error(exc: Exception) -> bool:
+    """Return True if the exception chain contains an SSL-related error."""
+    import ssl as _ssl
+    cause = exc
+    while cause is not None:
+        if isinstance(cause, _ssl.SSLError):
+            return True
+        msg = str(cause).lower()
+        if "ssl" in msg or "certificate" in msg or "handshake" in msg:
+            return True
+        cause = getattr(cause, "__cause__", None) or getattr(cause, "__context__", None)
+    return False
+
+
 _DEFAULT_HEADERS = {
     "Content-Type": "text/xml; charset=utf-8",
     "Accept": "text/xml, multipart/related",
@@ -103,11 +117,33 @@ class Transport:
 
                 return response.content
 
-            except httpx.TimeoutException as e:
+            except httpx.TimeoutException:
                 last_error = TimeoutError(
                     f"Request timed out ({self.timeout}s)",
                     hint=f"Endpoint: {endpoint} — consider increasing the timeout.",
                 )
+            except httpx.ConnectError as e:
+                if _is_ssl_error(e):
+                    from urllib.parse import urlparse
+                    host = urlparse(endpoint).netloc or endpoint
+                    last_error = HttpError(
+                        f"SSL verification failed for {endpoint}",
+                        hint=(
+                            f"The server's certificate could not be verified.\n\n"
+                            f"  Options:\n"
+                            f'    verify="/path/to/ca-bundle.pem"   # custom CA bundle\n'
+                            f"    verify=False                       # disable (development only)\n\n"
+                            f"  To extract the server certificate:\n"
+                            f"    openssl s_client -connect {host}:443 -showcerts 2>/dev/null \\\n"
+                            f"      | sed -n '/BEGIN CERTIFICATE/,/END CERTIFICATE/p' > ca.pem\n"
+                            f"  Then: verify='ca.pem'"
+                        ),
+                    )
+                else:
+                    last_error = HttpError(
+                        f"Connection error: {e}",
+                        hint=f"Is the endpoint reachable? {endpoint}",
+                    )
             except httpx.RequestError as e:
                 last_error = HttpError(
                     f"Connection error: {e}",
@@ -174,6 +210,28 @@ class AsyncTransport:
                     f"Request timed out ({self.timeout}s)",
                     hint=f"Endpoint: {endpoint} — consider increasing the timeout.",
                 )
+            except httpx.ConnectError as e:
+                if _is_ssl_error(e):
+                    from urllib.parse import urlparse
+                    host = urlparse(endpoint).netloc or endpoint
+                    last_error = HttpError(
+                        f"SSL verification failed for {endpoint}",
+                        hint=(
+                            f"The server's certificate could not be verified.\n\n"
+                            f"  Options:\n"
+                            f'    verify="/path/to/ca-bundle.pem"   # custom CA bundle\n'
+                            f"    verify=False                       # disable (development only)\n\n"
+                            f"  To extract the server certificate:\n"
+                            f"    openssl s_client -connect {host}:443 -showcerts 2>/dev/null \\\n"
+                            f"      | sed -n '/BEGIN CERTIFICATE/,/END CERTIFICATE/p' > ca.pem\n"
+                            f"  Then: verify='ca.pem'"
+                        ),
+                    )
+                else:
+                    last_error = HttpError(
+                        f"Connection error: {e}",
+                        hint=f"Is the endpoint reachable? {endpoint}",
+                    )
             except httpx.RequestError as e:
                 last_error = HttpError(
                     f"Connection error: {e}",

@@ -28,19 +28,32 @@ header{padding:12px 24px;background:#1a1d27;border-bottom:1px solid #2d3148;disp
 .resp-panel{flex:1;min-width:280px}
 .op-title{font-size:22px;font-weight:700;margin-bottom:2px}
 .op-sub{font-size:13px;color:#64748b;margin-bottom:22px}
+/* flat field */
 .field{margin-bottom:14px}
-label{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:#94a3b8;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.04em}
+label{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:#94a3b8;margin-bottom:5px;letter-spacing:0.01em}
 .req{color:#f87171;font-size:11px}
 .opt{color:#475569;font-size:10px;font-weight:400;text-transform:none;letter-spacing:0}
 input[type=text],textarea{width:100%;background:#1a1d27;border:1px solid #2d3148;border-radius:6px;padding:8px 10px;color:#e2e8f0;font-size:13px;outline:none;transition:border-color 0.15s;font-family:'SF Mono','Fira Code','Consolas',monospace;resize:vertical}
-input[type=text]:focus,textarea:focus{border-color:#7c3aed;background:#1a1d27}
+input[type=text]:focus,textarea:focus{border-color:#7c3aed}
 .type-hint{font-size:10px;color:#374151;margin-top:3px;font-family:'SF Mono','Fira Code',monospace}
+/* nested group */
+.field-group{margin-bottom:16px;border:1px solid #1e2130;border-radius:8px;overflow:hidden}
+.field-group-hd{padding:8px 12px;background:#13151f;border-bottom:1px solid #1e2130;display:flex;align-items:center;gap:6px}
+.field-group-name{font-size:12px;font-weight:700;color:#a78bfa;letter-spacing:0.01em}
+.field-group-type{font-size:11px;color:#475569;font-family:'SF Mono','Fira Code',monospace}
+.field-group-req{font-size:10px;color:#f87171}
+.field-group-opt{font-size:10px;color:#475569}
+.field-group-body{padding:12px 12px 4px}
+.field-group-body .field{margin-bottom:10px}
+.field-group-body label{font-size:11px;color:#64748b}
+/* buttons */
 .btn{background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:10px 22px;font-size:14px;font-weight:600;cursor:pointer;transition:background 0.15s;display:inline-flex;align-items:center;gap:8px}
 .btn:hover{background:#6d28d9}
 .btn:disabled{background:#1e293b;color:#475569;cursor:not-allowed}
 .btn-row{display:flex;align-items:center;gap:12px;margin-top:4px}
 .clear-btn{background:transparent;border:1px solid #2d3148;color:#64748b;border-radius:6px;padding:9px 14px;font-size:13px;cursor:pointer;transition:all 0.15s}
 .clear-btn:hover{border-color:#475569;color:#94a3b8}
+/* response */
 .resp-hd{font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px;display:flex;align-items:center;gap:8px}
 .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.02em}
 .badge-ok{background:#064e3b;color:#34d399}
@@ -100,7 +113,7 @@ function renderSidebar(list) {
     d.className = 'op-item' + (currentOp && currentOp.name === op.name ? ' active' : '');
     d.textContent = op.name;
     d.title = op.name;
-    d.onclick = () => { selectOp(op); };
+    d.onclick = () => selectOp(op);
     el.appendChild(d);
   });
 }
@@ -118,23 +131,54 @@ function selectOp(op) {
   renderForm(op);
 }
 
+/* ---- Field rendering ---- */
+
+function renderFields(fields, prefix) {
+  let html = '';
+  fields.forEach(f => {
+    const id = prefix ? prefix + '__' + f.name : f.name;
+    if (f.children && f.children.length > 0) {
+      // Complex type → grouped section
+      const reqLabel = f.required
+        ? '<span class="field-group-req">required</span>'
+        : '<span class="field-group-opt">optional</span>';
+      html += `
+        <div class="field-group">
+          <div class="field-group-hd">
+            <span class="field-group-name">${esc(f.name)}</span>
+            <span class="field-group-type">${esc(f.type)}</span>
+            ${reqLabel}
+          </div>
+          <div class="field-group-body">
+            ${renderFields(f.children, id)}
+          </div>
+        </div>`;
+    } else {
+      // Primitive field
+      const isLong = ['base64Binary','string'].includes(f.type);
+      const ph = f.required ? 'required' : 'optional';
+      const inp = isLong
+        ? `<textarea id="f_${esc(id)}" rows="2" placeholder="${ph}"></textarea>`
+        : `<input type="text" id="f_${esc(id)}" placeholder="${ph}">`;
+      const reqMark = f.required
+        ? '<span class="req">*</span>'
+        : '<span class="opt">optional</span>';
+      html += `
+        <div class="field">
+          <label>${esc(f.name)}${reqMark}</label>
+          ${inp}
+          <div class="type-hint">${esc(f.type)}</div>
+        </div>`;
+    }
+  });
+  return html;
+}
+
 function renderForm(op) {
   const hasFields = op.fields.length > 0;
-  let fieldsHtml = hasFields ? '' : '<div class="no-fields">No input parameters</div>';
-
-  op.fields.forEach(f => {
-    const isLong = ['base64Binary','string'].includes(f.type);
-    const ph = f.required ? 'required' : 'optional';
-    const inp = isLong
-      ? `<textarea id="f_${esc(f.name)}" rows="2" placeholder="${ph}"></textarea>`
-      : `<input type="text" id="f_${esc(f.name)}" placeholder="${ph}">`;
-    fieldsHtml += `
-      <div class="field">
-        <label>${esc(f.name)}${f.required ? '<span class="req">*</span>' : '<span class="opt">optional</span>'}</label>
-        ${inp}
-        <div class="type-hint">${esc(f.type)}</div>
-      </div>`;
-  });
+  const fieldsHtml = hasFields
+    ? renderFields(op.fields, '')
+    : '<div class="no-fields">No input parameters</div>';
 
   document.getElementById('content').innerHTML = `
     <div class="form-panel">
@@ -152,6 +196,22 @@ function renderForm(op) {
     </div>`;
 }
 
+/* ---- Collect form values (flat with __ separator) ---- */
+
+function collectValues(fields, prefix, out) {
+  fields.forEach(f => {
+    const id = prefix ? prefix + '__' + f.name : f.name;
+    if (f.children && f.children.length > 0) {
+      collectValues(f.children, id, out);
+    } else {
+      const el = document.getElementById('f_' + id);
+      if (el && el.value.trim() !== '') out[id] = el.value.trim();
+    }
+  });
+}
+
+/* ---- Execute ---- */
+
 async function execute() {
   if (!currentOp) return;
   const btn = document.getElementById('exec-btn');
@@ -160,18 +220,15 @@ async function execute() {
   document.getElementById('resp-badge').innerHTML = '';
   document.getElementById('resp-time').textContent = '';
 
-  const kwargs = {};
-  currentOp.fields.forEach(f => {
-    const el = document.getElementById('f_' + f.name);
-    if (el && el.value.trim() !== '') kwargs[f.name] = el.value.trim();
-  });
+  const flat = {};
+  collectValues(currentOp.fields, '', flat);
 
   const t0 = Date.now();
   try {
     const res = await fetch('/api/call/' + currentOp.name, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(kwargs),
+      body: JSON.stringify(flat),
     });
     const data = await res.json();
     const ms = Date.now() - t0;
@@ -188,15 +245,12 @@ async function execute() {
   } catch (e) {
     document.getElementById('resp-box').innerHTML = '<span class="resp-err">Network error: ' + esc(e.message) + '</span>';
   }
-  btn.disabled = false; btn.textContent = '▶ Execute';
+  btn.disabled = false; btn.innerHTML = '&#9654; Execute';
 }
 
 function clearForm() {
   if (!currentOp) return;
-  currentOp.fields.forEach(f => {
-    const el = document.getElementById('f_' + f.name);
-    if (el) el.value = '';
-  });
+  document.querySelectorAll('#content input, #content textarea').forEach(el => el.value = '');
   document.getElementById('resp-box').innerHTML = '<span style="color:#1e293b">Response will appear here…</span>';
   document.getElementById('resp-badge').innerHTML = '';
   document.getElementById('resp-time').textContent = '';

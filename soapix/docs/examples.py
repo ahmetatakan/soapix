@@ -37,8 +37,28 @@ _TYPE_DEFAULTS: dict[str, str] = {
 }
 
 
-def _example_value(param: ParameterInfo) -> str:
-    raw = _TYPE_DEFAULTS.get(param.type_name, '"..."')
+def _example_value(
+    param: ParameterInfo,
+    doc: WsdlDocument | None = None,
+    _visited: frozenset[str] | None = None,
+) -> str:
+    visited = _visited or frozenset()
+    type_name = param.type_name
+
+    if doc is not None and type_name not in visited:
+        from soapix.docs.resolver import get_type_fields
+        children = get_type_fields(type_name, doc)
+        if children:
+            inner = visited | {type_name}
+            pairs = ", ".join(
+                f'"{c.name}": {_example_value(c, doc, inner)}'
+                for c in children
+                if c.name != "_any"
+            )
+            raw = "{" + pairs + "}"
+            return f"[{raw}]" if param.is_list else raw
+
+    raw = _TYPE_DEFAULTS.get(type_name, '"..."')
     if param.is_list:
         return f"[{raw}]"
     return raw
@@ -66,7 +86,7 @@ def build_example(
         if first:
             all_shown = [first]
 
-    args = ", ".join(f"{p.name}={_example_value(p)}" for p in all_shown)
+    args = ", ".join(f"{p.name}={_example_value(p, doc)}" for p in all_shown)
     return f"{client_var}.service.{op.name}({args})"
 
 

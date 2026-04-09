@@ -11,6 +11,47 @@ from urllib.parse import urlparse
 
 if TYPE_CHECKING:
     from soapix.client import SoapClient
+    from soapix.wsdl.types import ParameterInfo, WsdlDocument
+
+
+def _build_field(
+    f: "ParameterInfo",
+    doc: "WsdlDocument",
+    _visited: frozenset[str] | None = None,
+) -> dict[str, Any]:
+    """Return a field dict, expanding complex types with cycle detection."""
+    from soapix.docs.resolver import get_type_fields
+
+    visited = _visited or frozenset()
+    type_name = f.type_name
+
+    children: list[dict[str, Any]] = []
+    if type_name not in visited:
+        child_params = get_type_fields(type_name, doc)
+        inner = visited | {type_name}
+        children = [_build_field(c, doc, inner) for c in child_params]
+
+    return {
+        "name": f.name,
+        "type": type_name,
+        "required": f.required,
+        "children": children,
+    }
+
+
+def _unflatten(flat: dict[str, Any]) -> dict[str, Any]:
+    """
+    Convert ``{"auth__appKey": "x", "auth__appSecret": "y"}``
+    to ``{"auth": {"appKey": "x", "appSecret": "y"}}``.
+    """
+    result: dict[str, Any] = {}
+    for key, value in flat.items():
+        parts = key.split("__")
+        d = result
+        for part in parts[:-1]:
+            d = d.setdefault(part, {})
+        d[parts[-1]] = value
+    return result
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -63,7 +104,7 @@ class _Handler(BaseHTTPRequestHandler):
         })
 
     def _serve_operations(self) -> None:
-        from soapix.docs.resolver import resolve_input_fields
+        from soapix.docs.resolver import resolve_input_fields, get_type_fields
 
         doc = self.client._wsdl_doc
         result = []
@@ -71,14 +112,7 @@ class _Handler(BaseHTTPRequestHandler):
             fields = resolve_input_fields(op, doc)
             result.append({
                 "name": name,
-                "fields": [
-                    {
-                        "name": f.name,
-                        "type": f.type_name,
-                        "required": f.required,
-                    }
-                    for f in fields
-                ],
+                "fields": [_build_field(f, doc) for f in fields],
             })
         self._json(result)
 
@@ -86,11 +120,12 @@ class _Handler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length", 0))
         raw = self.rfile.read(length)
         try:
-            kwargs: dict[str, Any] = json.loads(raw) if raw else {}
+            flat: dict[str, Any] = json.loads(raw) if raw else {}
         except json.JSONDecodeError:
             self._json({"ok": False, "error": "Invalid JSON body"})
             return
 
+        kwargs = _unflatten(flat)
         try:
             result = self.client._call(op_name, **kwargs)
             self._json({"ok": True, "result": result})

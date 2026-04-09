@@ -12,7 +12,7 @@ from rich.text import Text
 
 from soapix.wsdl.types import OperationInfo, ParameterInfo, WsdlDocument
 from soapix.docs.examples import build_example
-from soapix.docs.resolver import resolve_input_fields, resolve_output_fields
+from soapix.docs.resolver import resolve_input_fields, resolve_output_fields, get_type_fields
 
 
 def _type_label(param: ParameterInfo) -> str:
@@ -27,6 +27,32 @@ def _required_label(param: ParameterInfo) -> str:
         default = f"  default: {param.default!r}" if param.default is not None else ""
         return f"[dim]optional{default}[/dim]"
     return "[bold red]required[/bold red]"
+
+
+def _add_nested_rows(
+    tbl: Table,
+    param: ParameterInfo,
+    doc: WsdlDocument,
+    indent: int,
+    visited: frozenset[str],
+) -> None:
+    """Recursively add child rows for complex types (cycle-safe)."""
+    type_name = param.type_name
+    if type_name in visited:
+        return
+    children = get_type_fields(type_name, doc)
+    if not children:
+        return
+    inner = visited | {type_name}
+    prefix_base = "  " * indent
+    for i, child in enumerate(children):
+        connector = "└ " if i == len(children) - 1 else "├ "
+        tbl.add_row(
+            f"[dim]{prefix_base}{connector}{child.name}[/dim]",
+            f"[dim]({_type_label(child)})[/dim]",
+            f"[dim]{_required_label(child)}[/dim]",
+        )
+        _add_nested_rows(tbl, child, doc, indent + 1, inner)
 
 
 def render_terminal(doc: WsdlDocument, console: Console | None = None) -> None:
@@ -82,6 +108,7 @@ def _render_operation(c: Console, op: OperationInfo, doc: WsdlDocument) -> None:
                     f"({_type_label(param)})",
                     _required_label(param),
                 )
+                _add_nested_rows(tbl, param, doc, indent=1, visited=frozenset())
         c.print(tbl)
     else:
         c.print("  [dim]No parameters[/dim]")

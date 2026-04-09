@@ -60,6 +60,19 @@ def load_xml(
         return etree.fromstring(content)
     except FileNotFoundError:
         raise WsdlNotFoundError(f"WSDL not found: {location}")
+    except ssl.SSLError as e:
+        host = urlparse(location).netloc or location
+        raise WsdlNotFoundError(
+            f"SSL verification failed for {location} — {e}\n\n"
+            f"  The server's certificate could not be verified.\n\n"
+            f"  Options:\n"
+            f'    verify="/path/to/ca-bundle.pem"   # custom CA bundle\n'
+            f"    verify=False                       # disable (development only)\n\n"
+            f"  To extract the server certificate:\n"
+            f"    openssl s_client -connect {host}:443 -showcerts 2>/dev/null \\\n"
+            f"      | sed -n '/BEGIN CERTIFICATE/,/END CERTIFICATE/p' > ca.pem\n"
+            f"  Then: verify='ca.pem'"
+        ) from e
     except OSError as e:
         raise WsdlNotFoundError(f"Failed to load WSDL: {location} — {e}")
     except etree.XMLSyntaxError as e:
