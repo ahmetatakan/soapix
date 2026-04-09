@@ -4,11 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "soapix"
-version = "0.4.0"
+version = "0.4.1"
 description = "A tolerant, self-documenting Python SOAP client library"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
+authors = [{ name = "Ahmet Atakan", email = "ahmetatakan.tech@gmail.com" }]
 keywords = ["soap", "wsdl", "xml", "webservice", "client"]
 classifiers = [
     "Development Status :: 3 - Alpha",
