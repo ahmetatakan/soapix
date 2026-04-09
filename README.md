@@ -335,6 +335,8 @@ gen.render(output="html",     path="api_docs.html")
 
 ## Interactive Playground
 
+> **Local development only.** The playground is intended for use on your local machine during development. It starts an unauthenticated HTTP server — do not run it on a remote server or expose it to a network.
+
 Point soapix at a WSDL and instantly test any operation from your browser — no Postman, no SoapUI, no configuration.
 
 ```python
