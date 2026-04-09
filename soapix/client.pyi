@@ -36,6 +36,15 @@ class SoapClient:
         path: str | None = ...,
     ) -> str | None: ...
 
+    def serve(
+        self,
+        host: str = ...,
+        port: int = ...,
+        open_browser: bool = ...,
+    ) -> None: ...
+
+    def check(self) -> None: ...
+
 class AsyncSoapClient:
     wsdl: str
     debug: bool
@@ -66,3 +75,12 @@ class AsyncSoapClient:
         output: str = ...,
         path: str | None = ...,
     ) -> str | None: ...
+
+    def serve(
+        self,
+        host: str = ...,
+        port: int = ...,
+        open_browser: bool = ...,
+    ) -> None: ...
+
+    def check(self) -> None: ...

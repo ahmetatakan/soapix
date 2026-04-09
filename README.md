@@ -1,6 +1,6 @@
 # soapix
 
-A tolerant, self-documenting Python SOAP client library.
+A tolerant, self-documenting Python SOAP client library with an interactive browser playground.
 
 soapix is designed to work with real-world SOAP services that don't perfectly
 follow the spec — handling namespace quirks, loose validation, and unclear error
@@ -9,8 +9,32 @@ messages that break other libraries.
 Built for the real world: where WSDL files are messy, error messages are cryptic,
 and you need async out of the box.
 
+## Quick Start
+
+```python
+pip install soapix
+```
+
+```python
+from soapix import SoapClient
+
+client = SoapClient("http://service.example.com/?wsdl")
+
+# Explore and test operations in the browser — no extra tools needed
+client.serve()
+
+# Or call directly from code
+result = client.service.GetUser(userId=123)
+print(result["name"])
+```
+
+`client.serve()` opens an interactive UI at `http://localhost:8765` — test any operation instantly, directly from your WSDL, with no Postman, SoapUI, or extra setup required.
+
+---
+
 ## Features
 
+- **Interactive playground** — `client.serve()` launches a browser UI to test any operation instantly — no Postman, no SoapUI, no extra setup
 - **Tolerant validation** — optional fields can be omitted; required `None` fields send `xsi:nil` instead of crashing
 - **Namespace tolerance** — trailing slashes, case differences, and URI fragments are normalized automatically
 - **Auto-documentation** — generates terminal, Markdown, and HTML docs directly from the WSDL
@@ -29,16 +53,6 @@ and you need async out of the box.
 
 ```bash
 pip install soapix
-```
-
-## Quick Start
-
-```python
-from soapix import SoapClient
-
-client = SoapClient("http://service.example.com/?wsdl")
-result = client.service.GetUser(userId=123)
-print(result["name"])
 ```
 
 ---
@@ -319,6 +333,44 @@ gen.render(output="html",     path="api_docs.html")
 
 ---
 
+## Interactive Playground
+
+Point soapix at a WSDL and instantly test any operation from your browser — no Postman, no SoapUI, no configuration.
+
+```python
+client = SoapClient("https://service.example.com/?wsdl")
+client.serve()
+```
+
+This starts a local HTTP server (default: `http://localhost:8765`) and opens your browser automatically. From the UI you can:
+
+- Browse all operations in the sidebar
+- Fill in input parameters with a form
+- Execute calls and see the response as formatted JSON
+- Filter operations by name with the search box
+- Use **Cmd+Enter** (Mac) / **Ctrl+Enter** to execute quickly
+
+```
+soapix playground — UserService
+  Listening at http://localhost:8765
+  5 operation(s) available
+  Press Ctrl+C to stop
+```
+
+Options:
+
+```python
+client.serve(
+    host="localhost",   # interface to bind (default: 'localhost')
+    port=8765,          # TCP port (default: 8765)
+    open_browser=True,  # open browser automatically (default: True)
+)
+```
+
+`serve()` is also available on `AsyncSoapClient` and can be called after entering the async context manager.
+
+---
+
 ## Service Check
 
 Before making your first call to an unfamiliar service, run `check()` to diagnose potential WSDL parsing issues without sending any requests.
@@ -442,6 +494,7 @@ Retries apply to `HttpError` (connection failures) and `TimeoutError`. Server-si
 | Namespace tolerance | Partial | Partial | Full |
 | Meaningful errors | No | No | Yes |
 | Auto documentation | No | No | Yes |
+| Interactive playground (`serve()`) | No | No | Yes |
 | Service diagnostics (`check()`) | No | No | Yes |
 | Async support | Partial | No | Native |
 | WSDL caching | No | No | Yes |

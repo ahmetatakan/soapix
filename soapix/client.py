@@ -142,6 +142,28 @@ class SoapClient:
         from soapix.docs.generator import DocsGenerator
         return DocsGenerator(self._wsdl_doc).render(output=output, path=path)
 
+    def serve(
+        self,
+        host: str = "localhost",
+        port: int = 8765,
+        open_browser: bool = True,
+    ) -> None:
+        """
+        Start an interactive browser-based playground for this service.
+
+        Opens a local HTTP server with a UI where you can browse operations,
+        fill in parameters, and execute SOAP calls — similar to Swagger UI.
+
+        Args:
+            host:         Interface to bind (default: 'localhost')
+            port:         TCP port (default: 8765)
+            open_browser: Open the browser automatically (default: True)
+
+        Press Ctrl+C to stop the server.
+        """
+        from soapix.playground.server import serve
+        serve(self, host=host, port=port, open_browser=open_browser)
+
     def check(self) -> None:
         """
         Diagnose potential WSDL parsing issues and print a report.
@@ -323,6 +345,24 @@ class AsyncSoapClient:
     ) -> str | None:
         from soapix.docs.generator import DocsGenerator
         return DocsGenerator(self._wsdl_doc).render(output=output, path=path)
+
+    def serve(
+        self,
+        host: str = "localhost",
+        port: int = 8765,
+        open_browser: bool = True,
+    ) -> None:
+        """Same interactive playground as SoapClient.serve()."""
+        proxy = object.__new__(SoapClient)
+        proxy._wsdl_doc = self._wsdl_doc
+        proxy.debug = self.debug
+        proxy.strict = self.strict
+        proxy.timeout = self.timeout
+        proxy.retries = self.retries
+        proxy.verify = self.verify
+        proxy.auth = self.auth
+        from soapix.playground.server import serve
+        serve(proxy, host=host, port=port, open_browser=open_browser)
 
     def check(self) -> None:
         """Same diagnostics as SoapClient.check()."""
