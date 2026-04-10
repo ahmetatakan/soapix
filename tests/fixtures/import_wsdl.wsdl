@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- WSDL with xs:import — loads Address and PhoneNumber from import_types.xsd -->
+<definitions
+    name="ContactService"
+    targetNamespace="http://example.com/contact"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/contact"
+    xmlns:common="http://example.com/commontypes"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/contact">
+
+      <!-- Import external type definitions -->
+      <xsd:import namespace="http://example.com/commontypes"
+                  schemaLocation="import_types.xsd"/>
+
+      <xsd:element name="CreateContact">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="name"    type="xsd:string"/>
+            <xsd:element name="phone"   type="common:PhoneNumber" minOccurs="0"/>
+            <xsd:element name="address" type="common:Address"     minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="CreateContactResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="contactId" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+    </xsd:schema>
+  </types>
+
+  <message name="CreateContactRequest">
+    <part name="parameters" element="tns:CreateContact"/>
+  </message>
+  <message name="CreateContactResponse">
+    <part name="parameters" element="tns:CreateContactResponse"/>
+  </message>
+
+  <portType name="ContactPortType">
+    <operation name="CreateContact">
+      <input  message="tns:CreateContactRequest"/>
+      <output message="tns:CreateContactResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="ContactBinding" type="tns:ContactPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="CreateContact">
+      <soap:operation soapAction="http://example.com/contact/CreateContact"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <service name="ContactService">
+    <port name="ContactPort" binding="tns:ContactBinding">
+      <soap:address location="http://example.com/contact"/>
+    </port>
+  </service>
+
+</definitions>

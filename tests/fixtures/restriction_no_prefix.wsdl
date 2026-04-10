@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- simpleType restriction with base type having no namespace prefix -->
+<definitions
+    name="CodeService"
+    targetNamespace="http://example.com/codes"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/codes"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/codes">
+
+      <!-- Restriction base without namespace prefix — "string" instead of "xsd:string" -->
+      <xsd:simpleType name="CountryCode">
+        <xsd:restriction base="string">
+          <xsd:maxLength value="2"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <!-- simpleType with no restriction and no list — union-like, returns None base -->
+      <xsd:simpleType name="AnyCode">
+        <xsd:union memberTypes="xsd:string xsd:int"/>
+      </xsd:simpleType>
+
+      <xsd:element name="GetCode">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="country" type="tns:CountryCode"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="GetCodeResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="code" type="tns:AnyCode"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+    </xsd:schema>
+  </types>
+
+  <message name="GetCodeRequest">
+    <part name="parameters" element="tns:GetCode"/>
+  </message>
+  <message name="GetCodeResponse">
+    <part name="parameters" element="tns:GetCodeResponse"/>
+  </message>
+
+  <portType name="CodePortType">
+    <operation name="GetCode">
+      <input  message="tns:GetCodeRequest"/>
+      <output message="tns:GetCodeResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="CodeBinding" type="tns:CodePortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="GetCode">
+      <soap:operation soapAction="GetCode"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <service name="CodeService">
+    <port name="CodePort" binding="tns:CodeBinding">
+      <soap:address location="http://example.com/codes"/>
+    </port>
+  </service>
+
+</definitions>

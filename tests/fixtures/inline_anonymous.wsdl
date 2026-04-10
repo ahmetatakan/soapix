@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Inline anonymous complexType inside a field element -->
+<definitions
+    name="ShipService"
+    targetNamespace="http://example.com/ship"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/ship"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/ship">
+
+      <xsd:complexType name="ShipOrder">
+        <xsd:sequence>
+          <xsd:element name="orderId" type="xsd:string"/>
+          <!-- Inline anonymous complexType — no type="" attribute, nested complexType child -->
+          <xsd:element name="address">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="street" type="xsd:string"/>
+                <xsd:element name="city"   type="xsd:string"/>
+                <xsd:element name="zip"    type="xsd:string"/>
+              </xsd:sequence>
+            </xsd:complexType>
+          </xsd:element>
+          <!-- Element with no type and no inline complexType → anyType -->
+          <xsd:element name="metadata" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:element name="Ship">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="order" type="tns:ShipOrder"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="ShipResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="trackingId" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+    </xsd:schema>
+  </types>
+
+  <message name="ShipRequest">
+    <part name="parameters" element="tns:Ship"/>
+  </message>
+  <message name="ShipResponse">
+    <part name="parameters" element="tns:ShipResponse"/>
+  </message>
+
+  <portType name="ShipPortType">
+    <operation name="Ship">
+      <input  message="tns:ShipRequest"/>
+      <output message="tns:ShipResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="ShipBinding" type="tns:ShipPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="Ship">
+      <soap:operation soapAction="http://example.com/ship/Ship"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <service name="ShipService">
+    <port name="ShipPort" binding="tns:ShipBinding">
+      <soap:address location="http://example.com/ship"/>
+    </port>
+  </service>
+
+</definitions>

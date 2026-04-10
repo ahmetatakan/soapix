@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- nillable="true" elements — should be treated as optional (required=False) -->
+<definitions
+    name="NillableService"
+    targetNamespace="http://example.com/nillable"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/nillable"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/nillable">
+
+      <xsd:element name="CreateRecord">
+        <xsd:complexType>
+          <xsd:sequence>
+            <!-- required non-nillable -->
+            <xsd:element name="title"   type="xsd:string"/>
+            <!-- nillable=true → required=False even though minOccurs defaults to 1 -->
+            <xsd:element name="notes"   type="xsd:string" nillable="true"/>
+            <!-- optional non-nillable -->
+            <xsd:element name="tags"    type="xsd:string" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="CreateRecordResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+    </xsd:schema>
+  </types>
+
+  <message name="CreateRecordRequest">
+    <part name="parameters" element="tns:CreateRecord"/>
+  </message>
+  <message name="CreateRecordResponse">
+    <part name="parameters" element="tns:CreateRecordResponse"/>
+  </message>
+
+  <portType name="NillablePortType">
+    <operation name="CreateRecord">
+      <input  message="tns:CreateRecordRequest"/>
+      <output message="tns:CreateRecordResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="NillableBinding" type="tns:NillablePortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="CreateRecord">
+      <soap:operation soapAction="http://example.com/nillable/CreateRecord"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <service name="NillableService">
+    <port name="NillablePort" binding="tns:NillableBinding">
+      <soap:address location="http://example.com/nillable"/>
+    </port>
+  </service>
+
+</definitions>

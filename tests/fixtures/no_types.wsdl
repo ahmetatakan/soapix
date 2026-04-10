@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- WSDL without a types section — parser must tolerate missing types -->
+<definitions
+    name="PingService"
+    targetNamespace="http://example.com/ping"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/ping"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <!-- No <types> section at all -->
+
+  <message name="PingRequest">
+    <part name="message" type="xsd:string"/>
+  </message>
+  <message name="PingResponse">
+    <part name="message" type="xsd:string"/>
+  </message>
+
+  <portType name="PingPortType">
+    <operation name="Ping">
+      <input  message="tns:PingRequest"/>
+      <output message="tns:PingResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="PingBinding" type="tns:PingPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="Ping">
+      <soap:operation soapAction="Ping"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <service name="PingService">
+    <port name="PingPort" binding="tns:PingBinding">
+      <soap:address location="http://example.com/ping"/>
+    </port>
+  </service>
+
+</definitions>

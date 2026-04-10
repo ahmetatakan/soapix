@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- RPC/literal style — operation wrapper element, params without xsi:type -->
+<definitions
+    name="MathService"
+    targetNamespace="http://example.com/math"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/math"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/math"/>
+  </types>
+
+  <message name="MultiplyRequest">
+    <part name="x" type="xsd:int"/>
+    <part name="y" type="xsd:int"/>
+  </message>
+  <message name="MultiplyResponse">
+    <part name="result" type="xsd:int"/>
+  </message>
+
+  <portType name="MathPortType">
+    <operation name="Multiply">
+      <input  message="tns:MultiplyRequest"/>
+      <output message="tns:MultiplyResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="MathBinding" type="tns:MathPortType">
+    <soap:binding style="rpc" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="Multiply">
+      <soap:operation soapAction="http://example.com/math/Multiply"/>
+      <input>  <soap:body use="literal" namespace="http://example.com/math"/> </input>
+      <output> <soap:body use="literal" namespace="http://example.com/math"/> </output>
+    </operation>
+  </binding>
+
+  <service name="MathService">
+    <port name="MathPort" binding="tns:MathBinding">
+      <soap:address location="http://example.com/math"/>
+    </port>
+  </service>
+
+</definitions>

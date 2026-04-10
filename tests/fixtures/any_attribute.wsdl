@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- xs:anyAttribute — type accepts any XML attribute -->
+<definitions
+    name="ExtensibleService"
+    targetNamespace="http://example.com/ext"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/ext"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/ext">
+
+      <!-- Type with xs:anyAttribute — should register _anyAttribute field -->
+      <xsd:complexType name="ExtensibleRequest">
+        <xsd:sequence>
+          <xsd:element name="payload" type="xsd:string"/>
+        </xsd:sequence>
+        <xsd:anyAttribute namespace="##any" processContents="lax"/>
+      </xsd:complexType>
+
+      <xsd:element name="Process">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="request" type="tns:ExtensibleRequest"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="ProcessResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="result" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+    </xsd:schema>
+  </types>
+
+  <message name="ProcessRequest">
+    <part name="parameters" element="tns:Process"/>
+  </message>
+  <message name="ProcessResponse">
+    <part name="parameters" element="tns:ProcessResponse"/>
+  </message>
+
+  <portType name="ExtPortType">
+    <operation name="Process">
+      <input  message="tns:ProcessRequest"/>
+      <output message="tns:ProcessResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="ExtBinding" type="tns:ExtPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="Process">
+      <soap:operation soapAction="http://example.com/ext/Process"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <service name="ExtensibleService">
+    <port name="ExtPort" binding="tns:ExtBinding">
+      <soap:address location="http://example.com/ext"/>
+    </port>
+  </service>
+
+</definitions>

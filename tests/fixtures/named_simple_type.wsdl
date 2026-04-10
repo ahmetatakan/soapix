@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Named simpleType with xs:restriction (not xs:list) — e.g. status code enum -->
+<definitions
+    name="StatusService"
+    targetNamespace="http://example.com/status"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/status"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/status">
+
+      <!-- Named simpleType with restriction — should register as kind="simple" -->
+      <xsd:simpleType name="StatusCode">
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="ACTIVE"/>
+          <xsd:enumeration value="INACTIVE"/>
+          <xsd:enumeration value="PENDING"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <!-- Named simpleType with restriction on integer -->
+      <xsd:simpleType name="ShortId">
+        <xsd:restriction base="xsd:int">
+          <xsd:minInclusive value="1"/>
+          <xsd:maxInclusive value="9999"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:element name="GetStatus">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id"     type="tns:ShortId"/>
+            <xsd:element name="filter" type="tns:StatusCode" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="GetStatusResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="status" type="tns:StatusCode"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+    </xsd:schema>
+  </types>
+
+  <message name="GetStatusRequest">
+    <part name="parameters" element="tns:GetStatus"/>
+  </message>
+  <message name="GetStatusResponse">
+    <part name="parameters" element="tns:GetStatusResponse"/>
+  </message>
+
+  <portType name="StatusPortType">
+    <operation name="GetStatus">
+      <input  message="tns:GetStatusRequest"/>
+      <output message="tns:GetStatusResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="StatusBinding" type="tns:StatusPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="GetStatus">
+      <soap:operation soapAction="http://example.com/status/GetStatus"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <service name="StatusService">
+    <port name="StatusPort" binding="tns:StatusBinding">
+      <soap:address location="http://example.com/status"/>
+    </port>
+  </service>
+
+</definitions>

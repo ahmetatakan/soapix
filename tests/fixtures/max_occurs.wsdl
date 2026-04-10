@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- maxOccurs="unbounded" — repeated / list-typed elements -->
+<definitions
+    name="OrderService"
+    targetNamespace="http://example.com/orders"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/orders"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/orders">
+
+      <xsd:complexType name="OrderItem">
+        <xsd:sequence>
+          <xsd:element name="sku"      type="xsd:string"/>
+          <xsd:element name="quantity" type="xsd:int"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:element name="CreateOrder">
+        <xsd:complexType>
+          <xsd:sequence>
+            <!-- at least one item required -->
+            <xsd:element name="item" type="tns:OrderItem" maxOccurs="unbounded"/>
+            <!-- optional tags list -->
+            <xsd:element name="tag"  type="xsd:string"   minOccurs="0" maxOccurs="unbounded"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="CreateOrderResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="orderId" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+    </xsd:schema>
+  </types>
+
+  <message name="CreateOrderRequest">
+    <part name="parameters" element="tns:CreateOrder"/>
+  </message>
+  <message name="CreateOrderResponse">
+    <part name="parameters" element="tns:CreateOrderResponse"/>
+  </message>
+
+  <portType name="OrderPortType">
+    <operation name="CreateOrder">
+      <input  message="tns:CreateOrderRequest"/>
+      <output message="tns:CreateOrderResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="OrderBinding" type="tns:OrderPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="CreateOrder">
+      <soap:operation soapAction="http://example.com/orders/CreateOrder"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <service name="OrderService">
+    <port name="OrderPort" binding="tns:OrderBinding">
+      <soap:address location="http://example.com/orders"/>
+    </port>
+  </service>
+
+</definitions>

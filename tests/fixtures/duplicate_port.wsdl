@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Two ports pointing to the same binding — duplicate operations skipped (first wins) -->
+<definitions
+    name="MultiPortService"
+    targetNamespace="http://example.com/multiport"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/multiport"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/multiport">
+      <xsd:element name="Ping">
+        <xsd:complexType><xsd:sequence/></xsd:complexType>
+      </xsd:element>
+      <xsd:element name="PingResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="pong" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+    </xsd:schema>
+  </types>
+
+  <message name="PingRequest">
+    <part name="parameters" element="tns:Ping"/>
+  </message>
+  <message name="PingResponse">
+    <part name="parameters" element="tns:PingResponse"/>
+  </message>
+
+  <portType name="MultiPortType">
+    <operation name="Ping">
+      <input  message="tns:PingRequest"/>
+      <output message="tns:PingResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="MultiBinding" type="tns:MultiPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="Ping">
+      <soap:operation soapAction="Ping"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <service name="MultiPortService">
+    <!-- Two ports pointing to the same binding — Ping registered only once -->
+    <port name="PrimaryPort" binding="tns:MultiBinding">
+      <soap:address location="http://primary.example.com/service"/>
+    </port>
+    <port name="SecondaryPort" binding="tns:MultiBinding">
+      <soap:address location="http://secondary.example.com/service"/>
+    </port>
+  </service>
+
+</definitions>

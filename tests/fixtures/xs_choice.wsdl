@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- xs:choice — one of the alternatives must be provided -->
+<definitions
+    name="SearchService"
+    targetNamespace="http://example.com/search"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/search"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/search">
+
+      <!-- Search by either userId or email (choice), plus a required locale -->
+      <xsd:complexType name="SearchCriteria">
+        <xsd:sequence>
+          <xsd:choice>
+            <xsd:element name="userId" type="xsd:int"/>
+            <xsd:element name="email"  type="xsd:string"/>
+          </xsd:choice>
+          <xsd:element name="locale" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:element name="Search">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="criteria" type="tns:SearchCriteria"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="SearchResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="found"  type="xsd:boolean"/>
+            <xsd:element name="userId" type="xsd:int" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+    </xsd:schema>
+  </types>
+
+  <message name="SearchRequest">
+    <part name="parameters" element="tns:Search"/>
+  </message>
+  <message name="SearchResponse">
+    <part name="parameters" element="tns:SearchResponse"/>
+  </message>
+
+  <portType name="SearchPortType">
+    <operation name="Search">
+      <documentation>Find a user by userId or email.</documentation>
+      <input  message="tns:SearchRequest"/>
+      <output message="tns:SearchResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="SearchBinding" type="tns:SearchPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="Search">
+      <soap:operation soapAction="http://example.com/search/Search"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <service name="SearchService">
+    <port name="SearchPort" binding="tns:SearchBinding">
+      <soap:address location="http://example.com/search"/>
+    </port>
+  </service>
+
+</definitions>

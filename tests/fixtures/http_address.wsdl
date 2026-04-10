@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Port with non-SOAP address element — parser falls back to generic address lookup -->
+<definitions
+    name="LegacyService"
+    targetNamespace="http://example.com/legacy"
+    xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:tns="http://example.com/legacy"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:http="http://schemas.xmlsoap.org/wsdl/http/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <types>
+    <xsd:schema targetNamespace="http://example.com/legacy">
+      <xsd:element name="GetVersion">
+        <xsd:complexType><xsd:sequence/></xsd:complexType>
+      </xsd:element>
+      <xsd:element name="GetVersionResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="version" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+    </xsd:schema>
+  </types>
+
+  <message name="GetVersionRequest">
+    <part name="parameters" element="tns:GetVersion"/>
+  </message>
+  <message name="GetVersionResponse">
+    <part name="parameters" element="tns:GetVersionResponse"/>
+  </message>
+
+  <portType name="LegacyPortType">
+    <operation name="GetVersion">
+      <input  message="tns:GetVersionRequest"/>
+      <output message="tns:GetVersionResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="LegacyBinding" type="tns:LegacyPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="GetVersion">
+      <soap:operation soapAction="GetVersion"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <service name="LegacyService">
+    <port name="LegacyPort" binding="tns:LegacyBinding">
+      <!-- Generic address element (not soap:address) — exercises HTTP fallback path -->
+      <http:address location="http://legacy.example.com/service"/>
+    </port>
+  </service>
+
+</definitions>

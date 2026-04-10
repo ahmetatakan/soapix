@@ -654,6 +654,8 @@ class WsdlParser:
                 if addr_el is None:
                     # Try HTTP binding address
                     for child in port_el:
+                        if callable(child.tag):
+                            continue
                         if localname(child.tag) == "address":
                             addr_el = child
                             break

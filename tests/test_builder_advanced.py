@@ -72,6 +72,20 @@ class TestRpcEncodedBuilder:
         xml = builder.build(op, {"a": None, "b": 5}).decode()
         assert "nil" in xml
 
+    def test_rpc_encoded_bool_param(self, rpc_doc):
+        builder = SoapBuilder(rpc_doc)
+        op = rpc_doc.get_operation("Add")
+        xml = builder.build(op, {"a": True, "b": 0}).decode()
+        assert ">true<" in xml
+
+    def test_rpc_encoded_datetime_param(self, rpc_doc):
+        from datetime import datetime
+        builder = SoapBuilder(rpc_doc)
+        op = rpc_doc.get_operation("Add")
+        dt = datetime(2026, 4, 10, 9, 0, 0)
+        xml = builder.build(op, {"a": dt, "b": 1}).decode()
+        assert "2026-04-10" in xml
+
 
 # ---------------------------------------------------------------------------
 # xs:list — space-separated serialization

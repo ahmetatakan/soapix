@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- External XSD imported by import_wsdl.wsdl -->
+<xs:schema
+    targetNamespace="http://example.com/commontypes"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <xs:complexType name="Address">
+    <xs:sequence>
+      <xs:element name="street" type="xs:string"/>
+      <xs:element name="city"   type="xs:string"/>
+      <xs:element name="zip"    type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="PhoneNumber">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\+?[0-9\-\s]+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+</xs:schema>
