@@ -4,6 +4,30 @@ All notable changes to this project are documented here.
 
 ---
 
+## [0.5.0] — 2026-04-10
+
+### Added
+
+- **Code generation** (`client.generate()` / `soapix generate` CLI) — generates a
+  fully typed Python client class from a WSDL. Complex nested types become
+  `@dataclass` definitions; required parameters have no default, optional parameters
+  default to `None`. The generated class wraps `SoapClient` and forwards all
+  constructor options via `**kwargs`.
+
+  ```bash
+  soapix generate http://service.example.com/?wsdl -o my_client.py
+  ```
+
+  ```python
+  client = SoapClient("http://service/?wsdl")
+  client.generate(path="my_client.py")
+  ```
+
+- **`soapix` CLI entry point** — `soapix generate <wsdl> [-o FILE]` available after
+  `pip install soapix`. Also accessible as `python -m soapix generate`.
+
+---
+
 ## [0.4.4] — 2026-04-09
 
 ### Changed

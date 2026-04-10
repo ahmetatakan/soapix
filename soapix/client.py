@@ -142,6 +142,32 @@ class SoapClient:
         from soapix.docs.generator import DocsGenerator
         return DocsGenerator(self._wsdl_doc).render(output=output, path=path)
 
+    def generate(self, path: str | None = None) -> str | None:
+        """
+        Generate a typed Python client class for this service.
+
+        Args:
+            path: Write generated code to this file path.
+                  If None, returns the code as a string.
+
+        Returns:
+            str if path is None, else None (file is written).
+
+        Example:
+            # Print to terminal
+            print(client.generate())
+
+            # Write to file
+            client.generate(path="my_service_client.py")
+        """
+        from soapix.codegen.generator import ClientGenerator
+        code = ClientGenerator(self._wsdl_doc).generate(self.wsdl)
+        if path is not None:
+            from pathlib import Path
+            Path(path).write_text(code, encoding="utf-8")
+            return None
+        return code
+
     def serve(
         self,
         host: str = "localhost",
@@ -345,6 +371,16 @@ class AsyncSoapClient:
     ) -> str | None:
         from soapix.docs.generator import DocsGenerator
         return DocsGenerator(self._wsdl_doc).render(output=output, path=path)
+
+    def generate(self, path: str | None = None) -> str | None:
+        """Same as SoapClient.generate() — generate a typed Python client class."""
+        from soapix.codegen.generator import ClientGenerator
+        code = ClientGenerator(self._wsdl_doc).generate(self.wsdl)
+        if path is not None:
+            from pathlib import Path
+            Path(path).write_text(code, encoding="utf-8")
+            return None
+        return code
 
     def serve(
         self,
