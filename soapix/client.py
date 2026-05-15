@@ -168,6 +168,17 @@ class SoapClient:
             return None
         return code
 
+    def parse_xml_field(self, text: str) -> Any:
+        """
+        Parse an XML document carried inside a SOAP string field.
+
+        Useful for services that return UBL/e-fatura XML as text, such as
+        applicationResponse. Invalid XML is returned unchanged.
+        """
+        from soapix.xml.parser import SoapResponseParser
+        parser = SoapResponseParser(self._wsdl_doc, strict=self.strict)
+        return parser.parse_xml_text(text)
+
     def serve(
         self,
         host: str = "localhost",
@@ -381,6 +392,12 @@ class AsyncSoapClient:
             Path(path).write_text(code, encoding="utf-8")
             return None
         return code
+
+    def parse_xml_field(self, text: str) -> Any:
+        """Same as SoapClient.parse_xml_field()."""
+        from soapix.xml.parser import SoapResponseParser
+        parser = SoapResponseParser(self._wsdl_doc, strict=self.strict)
+        return parser.parse_xml_text(text)
 
     def serve(
         self,

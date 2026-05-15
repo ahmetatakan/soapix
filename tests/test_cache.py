@@ -207,3 +207,8 @@ class TestSoapClientConfig:
     def test_debug_false_default(self):
         client = SoapClient(str(FIXTURES / "simple.wsdl"), cache=None)
         assert client.debug is False
+
+    def test_parse_xml_field_helper(self):
+        client = SoapClient(str(FIXTURES / "simple.wsdl"), cache=None)
+        result = client.parse_xml_field("<ApplicationResponse><ID>abc</ID></ApplicationResponse>")
+        assert result == {"ID": "abc"}

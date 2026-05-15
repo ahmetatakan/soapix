@@ -303,6 +303,45 @@ If something is wrong:
 
 ---
 
+## XML Text Fields
+
+soapix follows the WSDL contract when parsing responses. If the WSDL declares a
+field as `xs:string`, soapix returns that field as a Python `str` even when the
+service puts a complete XML document inside it. This is common in e-invoice/UBL
+services:
+
+```python
+result = client.service.GetApplicationResponse(...)
+xml_text = result["applicationResponse"]  # raw XML string from the service
+```
+
+When you want a JSON-like dict for that embedded XML, parse the field explicitly:
+
+```python
+application_response = client.parse_xml_field(xml_text)
+
+print(application_response["ID"])
+print(application_response["DocumentResponse"]["Response"]["ResponseCode"])
+```
+
+Invalid XML is returned unchanged, so the helper is safe to call on optional or
+service-dependent string fields.
+
+For very large XML documents, `parse_xml_field()` builds a full Python dict for
+the whole document. That is the right choice when you want JSON-like output. If
+you only need one or two values from a large XML payload, parsing with `lxml` and
+reading those values with XPath can be more efficient because it avoids building
+a dict for the entire document.
+
+```python
+from lxml import etree
+
+root = etree.fromstring(xml_text.encode("utf-8"))
+response_code = root.xpath("string(//*[local-name()='ResponseCode'][1])")
+```
+
+---
+
 ## Error Handling
 
 soapix raises structured exceptions with actionable context.

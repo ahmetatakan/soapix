@@ -15,6 +15,7 @@ class SoapClient:
     timeout: float
     retries: int
     verify: bool | str
+    auth: tuple[str, str] | None
     service: _ServiceProxy
 
     def __init__(
@@ -45,6 +46,10 @@ class SoapClient:
 
     def check(self) -> None: ...
 
+    def generate(self, path: str | None = ...) -> str | None: ...
+
+    def parse_xml_field(self, text: str) -> Any: ...
+
 class AsyncSoapClient:
     wsdl: str
     debug: bool
@@ -52,6 +57,7 @@ class AsyncSoapClient:
     timeout: float
     retries: int
     verify: bool | str
+    auth: tuple[str, str] | None
     service: _AsyncServiceProxy
 
     def __init__(
@@ -84,3 +90,7 @@ class AsyncSoapClient:
     ) -> None: ...
 
     def check(self) -> None: ...
+
+    def generate(self, path: str | None = ...) -> str | None: ...
+
+    def parse_xml_field(self, text: str) -> Any: ...

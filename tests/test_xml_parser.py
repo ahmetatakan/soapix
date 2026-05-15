@@ -565,3 +565,56 @@ class TestMixedContent:
         # Mixed content: leading text → _text key
         assert isinstance(result["name"], dict)
         assert result["name"]["_text"] == "Hello"
+
+
+class TestEmbeddedXmlText:
+    """XML carried inside string fields can be parsed when explicitly enabled."""
+
+    def test_embedded_xml_text_is_preserved_by_default(self, simple_doc):
+        xml = b"""<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+          <soap:Body>
+            <GetUserResponse xmlns="http://example.com/userservice">
+              <userId>1</userId>
+              <name>&lt;ApplicationResponse&gt;&lt;ID&gt;abc&lt;/ID&gt;&lt;/ApplicationResponse&gt;</name>
+              <email>x</email><active>true</active>
+            </GetUserResponse>
+          </soap:Body>
+        </soap:Envelope>"""
+        parser = SoapResponseParser(simple_doc)
+        op = simple_doc.get_operation("GetUser")
+        result = parser.parse(xml, op)
+        assert result["name"] == "<ApplicationResponse><ID>abc</ID></ApplicationResponse>"
+
+    def test_parse_xml_text_helper(self, simple_doc):
+        parser = SoapResponseParser(simple_doc)
+        result = parser.parse_xml_text(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+            "<ApplicationResponse>"
+            "<ID>abc</ID>"
+            "<ResponseCode>18</ResponseCode>"
+            "</ApplicationResponse>"
+        )
+        assert result == {"ID": "abc", "ResponseCode": 18}
+
+    def test_parse_xml_text_helper_with_declaration_and_namespaces(self, simple_doc):
+        parser = SoapResponseParser(simple_doc)
+        result = parser.parse_xml_text(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+            "<ApplicationResponse "
+            "xmlns=\"urn:oasis:names:specification:ubl:schema:xsd:ApplicationResponse-2\" "
+            "xmlns:cbc=\"urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2\">"
+            "<cbc:UBLVersionID>2.1</cbc:UBLVersionID>"
+            "<cbc:ID>ca5e4f47-482c-4f4e-9570-e023961172d0</cbc:ID>"
+            "<cbc:IssueDate>2026-05-15</cbc:IssueDate>"
+            "<cbc:ResponseCode>18</cbc:ResponseCode>"
+            "</ApplicationResponse>"
+        )
+        assert result["UBLVersionID"] == 2.1
+        assert result["ID"] == "ca5e4f47-482c-4f4e-9570-e023961172d0"
+        assert result["IssueDate"] == "2026-05-15"
+        assert result["ResponseCode"] == 18
+
+    def test_parse_xml_text_helper_returns_original_text_on_invalid_xml(self, simple_doc):
+        parser = SoapResponseParser(simple_doc)
+        result = parser.parse_xml_text("5 < 10")
+        assert result == "5 < 10"

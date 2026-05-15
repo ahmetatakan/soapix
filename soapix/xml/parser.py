@@ -37,6 +37,11 @@ class SoapResponseParser:
 
     # Parser instance with huge_tree enabled for large base64 payloads
     _huge_parser = etree.XMLParser(huge_tree=True)
+    _embedded_xml_parser = etree.XMLParser(
+        huge_tree=True,
+        no_network=True,
+        resolve_entities=False,
+    )
 
     def parse(self, response_xml: bytes, operation: OperationInfo) -> Any:
         """Parse the raw response bytes and return a Python dict."""
@@ -229,6 +234,28 @@ class SoapResponseParser:
                 return only_value
 
         return result
+
+    def parse_xml_text(self, text: str) -> Any:
+        """
+        Parse a string value that contains a complete XML document.
+
+        If the string is not valid XML, returns the original string.
+        """
+        stripped = text.strip()
+        if not stripped or not (stripped.startswith("<") or stripped.startswith("<?xml")):
+            return text
+        if ">" not in stripped:
+            return text
+
+        try:
+            root = etree.fromstring(
+                stripped.encode("utf-8"),
+                self._embedded_xml_parser,
+            )
+        except etree.XMLSyntaxError:
+            return text
+
+        return self._element_to_dict(root)
 
     def _cast_value(self, text: str) -> Any:
         """Attempt simple type casting for common XSD types."""
